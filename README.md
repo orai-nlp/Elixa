@@ -2,7 +2,7 @@
 EliXa
 =======
 
-Aspect based sentiment analysis platform
+Aspect based sentiment analysis platform developed by the Elhuyar Foundation. Licensed under GNU GPL v3 terms.
 
 
 Contents
@@ -90,12 +90,12 @@ git clone https://bitbucket.org/elh-eus/elh-absa
 3. Dependencies - IXA-PIPES
 ---------------------------
 
-EliXa uses internally ixa-pipes as default NLP chain (Other NLP processors are supported so long as the input is in one of the accepted formats [tab|naf-xml]). These tools require certain resources to be included in the src/main/resources directory before compilation.
+EliXa uses internally ixa-pipes as default NLP chain (Other NLP processors are supported so long as the input is in one of the accepted formats [tab|naf-xml]). Ixa-pipes require certain resources to be included in the src/main/resources directory before compilation.
 
 Get the resources from https://github.com/ixa-ehu/ixa-pipe-pos#resources and unpack them in the src/main/resources
 
 ````shell
-cd EliXa
+cd elixa
 wget http://ixa2.si.ehu.es/ixa-pipes/models/pos-resources.tgz
 src/main/resources
 tar -xzvf pos-resources.tgz -C src/main/resources
@@ -115,7 +115,7 @@ cp src/main/resources/es/es-locutions.txt src/main/resources/lemmatizer-dicts/fr
 ---------------------------
 
 ````shell
-cd elh-absa
+cd elixa
 mvn clean package
 ````
 
@@ -133,16 +133,15 @@ To install the module in the local maven repository, usually located in ~/.m2/, 
 mvn clean install
 ````
 
-7. USING elh-absa
+7. USING EliXa
 =========================
 
 
-Elh-absa Funcionalities
+EliXa Funcionalities
 ==========================
-Elh-absa provides 4 main funcionalities:
+EliXa provides 4 main funcionalities:
    - **ate**: Aspect term extraction (term category classification included.
    - **atp**: Aspect term polarity
-   - **acp**: Aspect category polarity.
    - **tgp**: Text global polarity.
 
 
