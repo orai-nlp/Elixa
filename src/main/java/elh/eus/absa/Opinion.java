@@ -22,11 +22,11 @@ package elh.eus.absa;
 public class Opinion {
 
 	private String id; //opinion id to link the opinion with the corresponding sentence. Format is "o[0-9]+"
-	private String target;
-	private Integer from;
-	private Integer to;
-	private String polarity;
-	private String category;
+	private String target; //opinion target string
+	private Integer from; //initial offset of the opinion target string
+	private Integer to; //final offset of the opinion target string
+	private String polarity; //polarity of the opinion 
+	private String category; //opinion target category value=global if polarity correspond to the whole sentence and not to a target
 	private String sId;   //sentence id to link the opinion with the corresponding sentence. Format is "s[0-9]+"
 	
 	public Opinion (String id, String trgt, Integer f, Integer t, String p, String c, String s)

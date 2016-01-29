@@ -27,8 +27,12 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.StringReader;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Properties;
 
@@ -41,7 +45,47 @@ import org.jdom2.JDOMException;
  *
  */
 public final class NLPpipelineWrapper {
+	
+	/**
+	 * Processes a given string with the Ixa-pipe tokenizer.
+	 * 
+	 * @param String text : input text
+	 * @return KAFDocument : tokenized input text in kaf format
+	 * 
+	 * @throws IOException
+	 * @throws JDOMException
+	 */
+	public static KAFDocument ixaPipesTok(String text, String lang, String savePath) throws IOException, JDOMException
+	{
+		// Regex added to correct ixa-pipes treatment of punctuation marks : 
+		// <wf id="w19" sent="1" para="1" offset="76" length="4">!!??</wf>
+		// <term id="t19" type="open" lemma="!!??" pos="N" morphofeat="NCMC000">
+		text = text.replaceAll("([!¡?¿])", "$1 ");	 //\p{Po} gets too many punctuation marks.
+		
+		
+		//kaf document to store tokenized text
+		KAFDocument kaf = new KAFDocument(lang, "v1.naf");
+		KAFDocument.LinguisticProcessor newLp = kaf.addLinguisticProcessor("text", "ixa-pipe-tok-"+lang, 
+				"v1.naf" + "-" + "elixa");
+		newLp.setBeginTimestamp();
+		// objects needed to call the tokenizer
+		BufferedReader breader = new BufferedReader(new StringReader(text));
+		Properties tokProp = setTokenizerProperties(lang, "default", "no", "no");		
+		
+		// tokenizer call
+		eus.ixa.ixa.pipe.tok.Annotate tokenizer = new eus.ixa.ixa.pipe.tok.Annotate(breader,tokProp);
+		tokenizer.tokenizeToKAF(kaf);
+		newLp.setEndTimestamp();
+		
+		breader.close();
 
+		System.err.println("NLPpipelineWrapper::ixaPipesTok - tokenizing ready");
+								
+		kaf.save(savePath);	
+		
+		return kaf;		
+	}
+	
 	/**
 	 * Processes a given string with the Ixa-pipe tokenizer.
 	 * 
@@ -62,7 +106,7 @@ public final class NLPpipelineWrapper {
 		//kaf document to store tokenized text
 		KAFDocument kaf = new KAFDocument(lang, "v1.naf");
 		KAFDocument.LinguisticProcessor newLp = kaf.addLinguisticProcessor("text", "ixa-pipe-tok-"+lang, 
-				"v1.naf" + "-" + "elh-absa");
+				"v1.naf" + "-" + "elixa");
 		newLp.setBeginTimestamp();
 		// objects needed to call the tokenizer
 		BufferedReader breader = new BufferedReader(new StringReader(text));
@@ -74,10 +118,10 @@ public final class NLPpipelineWrapper {
 		newLp.setEndTimestamp();
 		
 		breader.close();
+
+		System.err.println("NLPpipelineWrapper::ixaPipesTok - tokenizing ready");
 								
 		return kaf;		
-
-		//System.err.println("pos tagging amaituta");
 	}
 	
 	/**
@@ -95,7 +139,7 @@ public final class NLPpipelineWrapper {
 	{
 		
 		KAFDocument.LinguisticProcessor posLp = tokenizedKaf.addLinguisticProcessor(
-				"terms", "ixa-pipe-pos-"+FileUtilsElh.fileName(posModelPath), "v1.naf" + "-" + "elh-absa");			
+				"terms", "ixa-pipe-pos-"+FileUtilsElh.fileName(posModelPath), "v1.naf" + "-" + "elixa");			
 		//pos tagger parameters
 		if (! FileUtilsElh.checkFile(posModelPath))
 		{
@@ -109,12 +153,49 @@ public final class NLPpipelineWrapper {
 		posLp.setBeginTimestamp();		
 		postagger.annotatePOSToKAF(tokenizedKaf);
 		posLp.setEndTimestamp();
-		
+
+		System.err.println("NLPpipelineWrapper::ixaPipesPos - pos tagging ready");
+
 		return tokenizedKaf;		
 
-		//System.err.println("pos tagging amaituta");
 	}
 
+	/**
+	 * Processes a given string with the Ixa-pipe PoS tagger.
+	 * 
+	 * @param KAFDocument tokenizedKaf: tokenized input text in KAF format
+	 * @param String posModelPath : path to the pos tagger model
+	 * 
+	 * @return KAFDocument : PoStagged input text in KAF format
+	 * 
+	 * @throws IOException
+	 * @throws JDOMException
+	 */
+	public static String ixaPipesPosConll(KAFDocument tokenizedKaf, String posModelPath) throws IOException, JDOMException
+	{
+		
+		//KAFDocument.LinguisticProcessor posLp = tokenizedKaf.addLinguisticProcessor(
+		//		"terms", "ixa-pipe-pos-"+FileUtilsElh.fileName(posModelPath), "v1.naf" + "-" + "elixa");			
+		//pos tagger parameters
+		if (! FileUtilsElh.checkFile(posModelPath))
+		{
+			System.err.println("NLPpipelineWrapper::ixaPipesPos() - provided pos model path is problematic, "
+					+ "probably pos tagging will end up badly...");
+		}
+		Properties posProp = setPostaggerProperties(posModelPath,
+				tokenizedKaf.getLang(), "3", "bin", "true");
+		//pos tagger call
+		eus.ixa.ixa.pipe.pos.Annotate postagger = new eus.ixa.ixa.pipe.pos.Annotate(posProp);
+		//posLp.setBeginTimestamp();		
+		return (postagger.annotatePOSToCoNLL(tokenizedKaf));
+		//posLp.setEndTimestamp();
+
+		//System.err.println("NLPpipelineWrapper::ixaPipesPos - pos tagging ready");
+
+		//return tokenizedKaf;		
+
+	}
+	
 	/**
 	 * Processes a given string with the Ixa-pipe PoS tagger.
 	 * 
@@ -130,14 +211,14 @@ public final class NLPpipelineWrapper {
 	{
 		
 		KAFDocument.LinguisticProcessor posLp = tokenizedKaf.addLinguisticProcessor(
-				"terms", "ixa-pipe-pos-"+FileUtilsElh.fileName(posModelPath), "v1.naf" + "-" + "elh-absa");			
-		posLp.setBeginTimestamp();		
+				"terms", "ixa-pipe-pos-"+FileUtilsElh.fileName(posModelPath), "v1.naf" + "-" + "elixa");			
+		posLp.setBeginTimestamp();			
 		postagger.annotatePOSToKAF(tokenizedKaf);
 		posLp.setEndTimestamp();
-		
-		return tokenizedKaf;		
 
-		//System.err.println("pos tagging amaituta");
+		System.err.println("NLPpipelineWrapper::ixaPipesPos - pos tagging ready");
+
+		return tokenizedKaf;		
 	}
 	
 	/**
@@ -155,7 +236,7 @@ public final class NLPpipelineWrapper {
 	{
 		
 		KAFDocument.LinguisticProcessor nercLp = tokenizedKaf.addLinguisticProcessor(
-				"entities", "ixa-pipe-pos-"+FileUtilsElh.fileName(nercModelPath), "v1.naf" + "-" + "elh-absa");			
+				"entities", "ixa-pipe-pos-"+FileUtilsElh.fileName(nercModelPath), "v1.naf" + "-" + "elixa");			
 		//pos tagger parameters
 		if (! FileUtilsElh.checkFile(nercModelPath))
 		{
@@ -190,7 +271,7 @@ public final class NLPpipelineWrapper {
 	{
 		
 		KAFDocument.LinguisticProcessor nercLp = tokenizedKaf.addLinguisticProcessor(
-				"entities", "ixa-pipe-pos-"+FileUtilsElh.fileName(nercModelPath), "v1.naf" + "-" + "elh-absa");			
+				"entities", "ixa-pipe-pos-"+FileUtilsElh.fileName(nercModelPath), "v1.naf" + "-" + "elixa");			
 		
 		//NERC tagger call
 		nercLp.setBeginTimestamp();		
@@ -215,6 +296,21 @@ public final class NLPpipelineWrapper {
 	public static KAFDocument ixaPipesTokPos(String text, String lang, String posModelPath) throws IOException, JDOMException
 	{
 		return ixaPipesPos(ixaPipesTok(text, lang), posModelPath);
+	}
+	
+	/**
+	 * Tokenizes and PoS tags a given string with Ixa-pipes.
+	 * 
+	 * @param String text : input text
+	 * @param String lang : input text language (ISO-639 code) 
+	 * @return KAFDocument : PoStagged input text in KAF format
+	 * 
+	 * @throws IOException
+	 * @throws JDOMException
+	 */
+	public static String ixaPipesTokPosConll(String text, String lang, String posModelPath) throws IOException, JDOMException
+	{
+		return ixaPipesPosConll(ixaPipesTok(text, lang), posModelPath);
 	}
 	
 	/**
@@ -315,7 +411,7 @@ public final class NLPpipelineWrapper {
 			eustBuilder.directory(new File(temp.getParent()));
 			//.redirectErrorStream(true);
 			Process eustagger = eustBuilder.start();	
-			int success = eustagger.waitFor();
+			int success = eustagger.waitFor();			
 			//System.err.println("eustagger succesful? "+success);
 			if (success != 0)
 			{
@@ -324,7 +420,17 @@ public final class NLPpipelineWrapper {
 			else
 			{				
 				String tagged = fname+".kaf";
-				FileUtilsElh.renameFile(temp.getAbsolutePath()+".etiketatua3",tagged);
+				BufferedReader reader = new BufferedReader(new InputStreamReader(eustagger.getInputStream()));
+				//new Eustagger_lite outputs to stdout. Also called ixa-pipe-pos-eu
+				if (taggerCommand.contains("eustagger") || taggerCommand.contains("ixa-pipe"))
+				{
+					Files.copy(eustagger.getInputStream(), Paths.get(tagged));
+				}
+				// old eustagger (euslem)
+				else
+				{
+					FileUtilsElh.renameFile(temp.getAbsolutePath()+".etiketatua3",tagged);
+				}
 			}
 			//
 			// delete all temporal files used in the process.
@@ -337,5 +443,40 @@ public final class NLPpipelineWrapper {
 		
 		return 0;
 	}
+	
+	
+	/**
+	 *  Process linguistically input sentence with ixa-pipes (tokenization and PoS tagging).
+	 *  A tagged file is generated for each sentence in the corpus and stored in the directory
+	 *  given as argument. Sentence Ids are used as file names. If a tagged file already exists 
+	 *  that sentence is not tagged 
+	 * 
+	 * @param nafdir : path to the directory were tagged files should be stored
+	 * @param posModel : model to be used by the PoS tagger
+	 * @throws IOException
+	 * @throws JDOMException
+	 */
+	public static String tagSentence(String input, String savePathNoExt, String lang, String posModel, eus.ixa.ixa.pipe.pos.Annotate postagger) throws IOException, JDOMException
+	{				
+		KAFDocument kafinst = new KAFDocument("","");
+					
+		if (FileUtilsElh.checkFile(savePathNoExt+".kaf"))
+		{
+			//System.err.println("NLPpipelineWrapper::tagSentence : file already there:"+savePathNoExt+".kaf");
+			return savePathNoExt+".kaf";
+		}
+		// if language is basque 'posModel' argument is used to pass the path to the basque morphological analyzer eustagger 
+		else if (lang.compareToIgnoreCase("eu")==0)
+		{
+			int ok =eustaggerCall(posModel, input, savePathNoExt);
+		}
+		else
+		{
+			kafinst = ixaPipesTokPos(input, lang, posModel, postagger);
+			kafinst.save(savePathNoExt+".kaf");										
+		}
+		return savePathNoExt+".kaf";
+	}
+	
 	
 }

@@ -48,6 +48,30 @@ import org.apache.commons.lang3.StringUtils;
 
 public class MicroTextNormalizer {
 
+	//various patterns used for normalization. 
+	private static Pattern affixes = Pattern.compile("^([^\\p{L}\\p{M}\\p{Nd}]*)([\\p{L}\\p{M}\\p{Nd}]+)([^\\p{L}\\p{M}\\p{Nd}]*)$"); 
+	private static Pattern allowedAcronyms = Pattern.compile("^([\\p{L}\\p{M}])\\1{1,2}(([\\p{L}\\p{M}])\\3{1,2})?$");
+	//words attached to hashtags (e.g., hello#world)
+	private static Pattern attachedWords = Pattern.compile("([^\\s])([@#][\\p{L}\\p{M}\\p{Nd}])");
+	
+	
+	// interjections
+	private static Pattern jajeji = Pattern.compile("(?i)\\b([j][jiea]+)\\b");
+	private static Pattern hahehi = Pattern.compile("(?i)\\b([h]*[iea]([hiea]+))\\b"); //hahaha but no ha (ha salido)
+	private static Pattern hjuas = Pattern.compile("(?i)\\b([hj]uas)+\\b");
+	private static Pattern lol = Pattern.compile("(?i)\\b(lol(ol)*)\\b");
+	private static Pattern hojo = Pattern.compile("(?i)\\b([hj]o[hj]o([hj]o)*)\\b");
+	private static Pattern buajaha = Pattern.compile("(?i)\\b([bm]ua[hj]a([hj]a)+)\\b");
+	private static Pattern muacks = Pattern.compile("(?i)\\b(m+u+a+c*k*s*)\\b");    
+	private static Pattern puff = Pattern.compile("(?i)\\b(p+u*f+)\\b");//INTERNEG
+	private static Pattern uf = Pattern.compile("(?i)\\b(u+f+)\\b"); //INTERNEG
+	
+	//twitter users
+	private static Pattern user = Pattern.compile("@([\\p{L}\\p{M}\\p{Nd}_]{1,15})");
+	
+	//hashtags
+	private static Pattern hashtag = Pattern.compile("#([^\\.,:;!?¿¡\\[\\]\\{\\}\'\"\\(\\)%&$@]+)");
+	private static Pattern multiWordhashtag = Pattern.compile("^([\\p{Nd}]+)?([\\p{L}\\p{M}]+)([\\p{Nd}]+)?");
 	private static Pattern multiUpper = Pattern.compile("([\\p{Lu}][\\p{Ll}]+)");
 	
 	private String language;
@@ -180,7 +204,8 @@ public class MicroTextNormalizer {
 	{
 		String out = "";
 		//separate words attached to hashtags and usernames (e.g., hello#world -> hello #world)
-		String in = input.replaceAll("([^\\s])([@#][\\p{L}\\p{M}\\p{Nd}])", "$1 $2"); 
+		//String in = input.replaceAll("([^\\s])([@#][\\p{L}\\p{M}\\p{Nd}])", "$1 $2");
+		String in = attachedWords.matcher(input).replaceAll("$1 $2");
 		if (! getEmodict().isEmpty())
 		{
 			in = emoticonMapping(in);
@@ -208,10 +233,11 @@ public class MicroTextNormalizer {
 			out+=token+" ";
 		}
 		out = out.trim().replaceAll("\\s+", " ");
-		if (input.compareTo(out)!=0)
-		{
-			System.out.println("MicroTextNormalization::normalizeSentence - input: "+input+" - out: "+out+"-");
-		}
+		// Debugging messages.
+		//if (input.compareTo(out)!=0)
+		//{
+		//	System.out.println("MicroTextNormalization::normalizeSentence - input: "+input+" - out: "+out+"-");
+		//}
 		return out;
 		
 		
@@ -276,13 +302,14 @@ public class MicroTextNormalizer {
 	private String normalizeUSR (String input, boolean anonimize){			
 		
 		String result = input;
+		Matcher m = user.matcher(result);
 		if (anonimize)
 		{
-			result = result.replaceAll("@([\\p{L}\\p{M}\\p{Nd}_]{1,15})", "USRID");
+			result = m.replaceAll("USRID");
 		}
 		else
 		{
-			result = result.replaceAll("@([\\p{L}\\p{M}\\p{Nd}_]{1,15})", "$1");
+			result = m.replaceAll("$1");
 		}
 		return result;
 		
@@ -303,7 +330,7 @@ public class MicroTextNormalizer {
 		// Since we use a whitespace based tokenizer, input could have attached symbols, such as quotes 
 		// or punctuation marks (e.g., great!, "nice"), Here separate and store those symbols to later restore 
 		// them (we want the text as close to the original as posible, only with non-standard words normalized).		
-		Pattern affixes = Pattern.compile("^([^\\p{L}\\p{M}\\p{Nd}]*)([\\p{L}\\p{M}\\p{Nd}]+)([^\\p{L}\\p{M}\\p{Nd}]*)$"); 
+		//Pattern affixes = Pattern.compile("^([^\\p{L}\\p{M}\\p{Nd}]*)([\\p{L}\\p{M}\\p{Nd}]+)([^\\p{L}\\p{M}\\p{Nd}]*)$"); 
 		Matcher m = affixes.matcher(input);
 		if (m.matches())
 		{
@@ -320,64 +347,70 @@ public class MicroTextNormalizer {
 		}
 			
 		// OOV dictionary matching. (e.g. xo -> pero; q -> que)		
-
+		
 		//OOV dictionary matching if we already have the correct form it should be stored in the correctedNonStandard hashmap.
 		if (nonStandard.containsKey(variations))
 		{
 			variations = nonStandard.get(variations);
 		}
 		// Do not correct acronyms such as PP or WWW or CCAA CCOO (only one and two letter acronyms are treated)
-		else if (variations.matches("^([\\p{L}\\p{M}])\\1{1,2}(([\\p{L}\\p{M}])\\3{1,2})?$"))
-		{
-			nonStandard.put(variations, variations);
-		}
-		//try to find the standard form of the word. Character repetition (e.g. feoooo -> feo; cooooool -> cool)
+		//variations.matches("^([\\p{L}\\p{M}])\\1{1,2}(([\\p{L}\\p{M}])\\3{1,2})?$")
 		else
 		{
-			String repetitions = removeRepetitions(variations,2);
-			// we only try to apply the corrected form if it has a minimum length (it is very difficult to know
-			// when a single letter is the correct form of a repetition)   
-			if (repetitions.length() > 1)
+			Matcher acro =  allowedAcronyms.matcher(variations);
+			if (acro.matches())
 			{
-				// WARNING lowercase conversion is locale dependent
-				if (formDict.contains(repetitions) || formDict.contains(repetitions.toLowerCase()))
+				nonStandard.put(variations, variations);
+			}
+		//try to find the standard form of the word. Character repetition (e.g. feoooo -> feo; cooooool -> cool)
+			else
+			{
+				String repetitions = removeRepetitions(variations,2);
+				// we only try to apply the corrected form if it has a minimum length (it is very difficult to know
+				// when a single letter is the correct form of a repetition)   
+				if (repetitions.length() > 1)
 				{
-					nonStandard.put(variations, repetitions);
-					variations = repetitions;
-				}
-				else
-				{				
-					repetitions = removeRepetitions(variations,1);
-					if (formDict.contains(repetitions)|| formDict.contains(repetitions.toLowerCase()))
-					{	
+					// WARNING lowercase conversion is locale dependent
+					if (formDict.contains(repetitions) || formDict.contains(repetitions.toLowerCase()))
+					{
 						nonStandard.put(variations, repetitions);
 						variations = repetitions;
 					}
 					else
-					{
-						nonStandard.put(variations, variations);
+					{				
+						repetitions = removeRepetitions(variations,1);
+						if (formDict.contains(repetitions)|| formDict.contains(repetitions.toLowerCase()))
+						{	
+							nonStandard.put(variations, repetitions);
+							variations = repetitions;
+						}
+						else
+						{
+							nonStandard.put(variations, variations);
+						}
 					}
 				}
+				else
+				{
+					nonStandard.put(variations, variations);
+				}
+				///System.err.println(input+" - "+variations+" - "+prefix+variations+suffix);		
 			}
-			else
-			{
-				nonStandard.put(variations, variations);
-			}
-			///System.err.println(input+" - "+variations+" - "+prefix+variations+suffix);		
 		}
 		String wNorm = prefix+variations+suffix;
 		
 		//onomatomeiak pos
-		wNorm = wNorm.replaceAll("(?i)\\b([j][jiea]+)\\b", " . INTERPOS .");
-		wNorm = wNorm.replaceAll("(?i)\\b([h]*[iea]([hiea]+))\\b", " . INTERPOS ."); //hahaha but no ha (ha salido)
-		wNorm = wNorm.replaceAll("(?i)\\b([hj]uas)+\\b", " . INTERPOS .");
-		wNorm = wNorm.replaceAll("(?i)\\b(lol(ol)*)\\b", " . INTERPOS .");
-		wNorm = wNorm.replaceAll("(?i)\\b([hj]o[hj]o([hj]o)*)\\b", " . INTERPOS .");
-		wNorm = wNorm.replaceAll("(?i)\\b([bm]ua[hj]a([hj]a)+)\\b", " . INTERPOS .");
-		wNorm = wNorm.replaceAll("(?i)\\b(m+u+a+c*k*s*)\\b", " . INTERPOS .");
-	        
-		wNorm = wNorm.replaceAll("(?i)\\b(p+u*f+)\\b", " . INTERNEG .");//INTERNEG
-		wNorm = wNorm.replaceAll("(?i)\\b(u+f+)\\b", " . INTERNEG ."); //INTERNEG
+		wNorm = jajeji.matcher(wNorm).replaceAll(" . INTERPOS .");
+		wNorm = hahehi.matcher(wNorm).replaceAll(" . INTERPOS .");//hahaha but no ha (ha salido)
+		wNorm = hjuas.matcher(wNorm).replaceAll(" . INTERPOS .");
+		wNorm = lol.matcher(wNorm).replaceAll(" . INTERPOS .");
+		wNorm = hojo.matcher(wNorm).replaceAll(" . INTERPOS .");
+		wNorm = buajaha.matcher(wNorm).replaceAll(" . INTERPOS .");
+		wNorm = muacks.matcher(wNorm).replaceAll(" . INTERPOS .");
+	
+		//onomatomeiak neg    
+		wNorm = puff.matcher(wNorm).replaceAll(" . INTERNEG .");//INTERNEG
+		wNorm = uf.matcher(wNorm).replaceAll(" . INTERNEG .");//INTERNEG
 	        	    			
 		return wNorm;
 	}
@@ -471,17 +504,19 @@ public class MicroTextNormalizer {
 		}
 		String wNorm = prefix+variations+suffix;
 		
+		
 		//onomatomeiak pos
-		wNorm = wNorm.replaceAll("(?i)\\b([j][jiea]+)\\b", " . INTERPOS .");
-		wNorm = wNorm.replaceAll("(?i)\\b([h]*[iea]([hiea]+))\\b", " . INTERPOS ."); //hahaha but no ha (ha salido)
-		wNorm = wNorm.replaceAll("(?i)\\b([hj]uas)+\\b", " . INTERPOS .");
-		wNorm = wNorm.replaceAll("(?i)\\b(lol(ol)*)\\b", " . INTERPOS .");
-		wNorm = wNorm.replaceAll("(?i)\\b([hj]o[hj]o([hj]o)*)\\b", " . INTERPOS .");
-		wNorm = wNorm.replaceAll("(?i)\\b([bm]ua[hj]a([hj]a)+)\\b", " . INTERPOS .");
-		wNorm = wNorm.replaceAll("(?i)\\b(m+u+a+c*k*s*)\\b", " . INTERPOS .");
-	        
-		wNorm = wNorm.replaceAll("(?i)\\b(p+u*f+)\\b", " . INTERNEG .");//INTERNEG
-		wNorm = wNorm.replaceAll("(?i)\\b(u+f+)\\b", " . INTERNEG ."); //INTERNEG
+		wNorm = jajeji.matcher(wNorm).replaceAll(" . INTERPOS .");
+		wNorm = hahehi.matcher(wNorm).replaceAll(" . INTERPOS .");//hahaha but no ha (ha salido)
+		wNorm = hjuas.matcher(wNorm).replaceAll(" . INTERPOS .");
+		wNorm = lol.matcher(wNorm).replaceAll(" . INTERPOS .");
+		wNorm = hojo.matcher(wNorm).replaceAll(" . INTERPOS .");
+		wNorm = buajaha.matcher(wNorm).replaceAll(" . INTERPOS .");
+		wNorm = muacks.matcher(wNorm).replaceAll(" . INTERPOS .");
+	
+		//onomatomeiak neg    
+		wNorm = puff.matcher(wNorm).replaceAll(" . INTERNEG .");//INTERNEG
+		wNorm = uf.matcher(wNorm).replaceAll(" . INTERNEG .");//INTERNEG
 	        	    			
 		return wNorm;
 	}
@@ -498,12 +533,12 @@ public class MicroTextNormalizer {
 			String result = input;
 			//erase the leading #char
 			//result.replaceAll("#([a-zA-Z0-9-]+)", "$1");		
-			result = result.replaceAll("#([^\\.,:;!?¿¡\\[\\]\\{\\}\'\"\\(\\)%&$@]+)", "$1");
+			result = hashtag.matcher(result).replaceAll("$1");
 			//perform division 
 			if (divide)
 			{
 				//word-number heuristics (donostia2016 | windows8 | 38Congreso | 2016Conference21)
-				result = result.replaceAll("^([\\p{Nd}]+)?([\\p{L}\\p{M}]+)([\\p{Nd}]+)?", "$1 $2 $3");
+				result = multiWordhashtag.matcher(result).replaceAll("$1 $2 $3");
 				
 				//UpperCase					
 				result = multiUpper.matcher(result).replaceAll("$1 ");

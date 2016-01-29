@@ -174,10 +174,11 @@ public final class FileUtilsElh {
 		String toprint = "";
 		Map <String, String> wfspans = new HashMap <String,String>();
 
-		for (List<WF> sentence : doc.getSentences())
+		int sentNum = doc.getNumSentences();
+		for (int i=0; i<sentNum; i++)    //(List<WF> sentence : doc.getSentences())
 		{			
 			// store spans of polarity terms in wfspans variable.
-			for (Term term : doc.getTermsByWFs(sentence))
+			for (Term term : doc.getTermsBySent(i))
 			{ 
 				if (term != null && term.hasSentiment() && (term.getSentiment().hasPolarity() || term.getSentiment().hasSentimentModifier()))
 				{
@@ -209,7 +210,7 @@ public final class FileUtilsElh {
 			}
 
 			// from now on write the html code to print the document.
-			for (WF form : sentence)
+			for (WF form : doc.getWFsBySent(i))
 			{
 
 				String wId = form.getId();
@@ -271,10 +272,11 @@ public final class FileUtilsElh {
 		String toprint = "";
 		Map <String, String> wfspans = new HashMap <String,String>();
 
-		for (List<WF> sentence : doc.getSentences())
+		int sentNum = doc.getNumSentences();
+		for (int i=0; i<sentNum; i++)    //(List<WF> sentence : doc.getSentences())
 		{			
 			// store spans of polarity terms in wfspans variable.
-			for (Term term : doc.getTermsByWFs(sentence))
+			for (Term term : doc.getTermsBySent(i))
 			{ 
 				if (term != null && term.hasSentiment() && (term.getSentiment().hasPolarity() || term.getSentiment().hasSentimentModifier()))
 				{
@@ -306,7 +308,7 @@ public final class FileUtilsElh {
 			}
 
 			// from now on write the html code to print the document.
-			for (WF form : sentence)
+			for (WF form : doc.getWFsBySent(i))
 			{
 
 				String wId = form.getId();

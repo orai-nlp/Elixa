@@ -113,7 +113,7 @@ public class Evaluator {
 	public Evaluator (Lexicon Lex, String syn, float thresh, String algorithm)
 	{
 		this.lexicon = Lex;
-		System.out.println("AvgRatioEstimator: lexicon loaded - "+lexicon.size()+" entries");
+		System.err.println("AvgRatioEstimator: lexicon loaded - "+lexicon.size()+" entries");
 		this.setThreshold(thresh);
 		this.setSynset(syn);	
 		this.setAlgorithm(algorithm);
@@ -167,9 +167,9 @@ public class Evaluator {
 	public Evaluator (File LexPath, String syn, float thresh, String algorithm)
 	{
 		this.lexicon = new Lexicon(LexPath, syn);
-		System.out.println("AvgRatioEstimator: lexicon loaded --> "+LexPath+" - "+lexicon.size()+" entries");
+		//System.out.println("AvgRatioEstimator: lexicon loaded --> "+LexPath+" - "+lexicon.size()+" entries");
 		System.err.println("AvgRatioEstimator: lexicon loaded --> "+LexPath+" - "+lexicon.size()+" entries");
-		System.err.println("AvgRatioEstimator: lexicon loaded --> "+lexicon.getNumericPolarity("larri")+" proba");
+		//System.err.println("AvgRatioEstimator: lexicon loaded --> "+lexicon.getNumericPolarity("larri")+" proba");
 		this.setThreshold(thresh);
 		this.setSynset(syn);
 		this.setAlgorithm(algorithm);
@@ -248,12 +248,12 @@ public class Evaluator {
 			while ((line = corpReader.readLine()) != null) 
 			{
 				// document start
-				Matcher match = Pattern.compile("<doc id=\"([^\"]+)\" pol=\"(neg|pos)\"( score=\"[0-9\\.]*\")?>").matcher(line);
+				Matcher match = Pattern.compile("<doc id=\"([^\"]+)\" (pol|polarity)=\"(neg|pos)\"( score=\"[0-9\\.]*\")?>").matcher(line);
 				if (match.find())
 				{				
 					//store actual polarity.
 					docid = match.group(1);
-					String pol = match.group(2);
+					String pol = match.group(3);
 					ref_pols.put(docid, pol);
 					//store actual polarity statistics
 			        if (! ref_polCounts.containsKey(pol))
@@ -786,6 +786,85 @@ public class Evaluator {
 		
 		return this.kafResults;
 	}
+	
+	
+	/**
+	 * This function predicts the polarity of a text given in the KAF format. argument is the path to the KAF file 
+	 * It saves tagged file to the given path + ".sent" extension.
+	 * 
+	 * @param fname
+	 * @return a map element containing statistics computed for the given text and 
+	 *          the path to the annotated file.
+	 */
+	public Map<String, String> processKaf (KAFDocument doc, String lexName) 
+	{
+		float score = 0;
+		int sentimentTerms = 0;
+		try {
+			//KAFDocument doc = KAFDocument.createFromFile(new File(fname));
+			
+			KAFDocument.LinguisticProcessor newLp = doc.addLinguisticProcessor("terms", "EliXa-polarity-tagger");
+			newLp.setVersion(lexName);			
+			newLp.setBeginTimestamp();
+			for (Term t : doc.getTerms())
+			{				
+				String lemma = t.getLemma();			
+				
+				int pol = lexicon.getScalarPolarity(lemma);				
+				if (pol != 123456789)
+				{
+					Sentiment ts = t.createSentiment();
+					switch (pol)
+					{
+					case 1: ts.setPolarity("positive"); break;
+					case -1: ts.setPolarity("negative"); break;
+					case 0: ts.setPolarity("neutral"); break;
+					case 2: ts.setSentimentModifier("intensifier"); break;
+					case 3: ts.setSentimentModifier("weakener"); break;
+					case 4: ts.setSentimentModifier("shifter"); break;
+					default: 
+					}
+					
+					score+= lexicon.getNumericPolarity(lemma);
+					//score+= pol;
+					sentimentTerms++;
+				}										
+			}			
+			newLp.setEndTimestamp();
+			//doc.save(fname+".sent");
+			//doc.print();
+			float avg = score / doc.getTerms().size();
+			//kafResults.put("taggedFile", fname+".sent");
+			kafResults.put("sentTermNum",String.valueOf(sentimentTerms));
+			kafResults.put("avg", String.valueOf(avg));
+			kafResults.put("thresh", String.valueOf(threshold));
+			if (avg > threshold)
+			{
+				kafResults.put("polarity", "pos");
+			}
+			else if (avg < threshold)
+			{
+				kafResults.put("polarity", "neg");
+			}
+			else
+			{
+				kafResults.put("polarity", "neu");
+			}									
+			
+		} /*catch (FileNotFoundException fe) {
+			System.err.println("AvgRatioEstimator: error when loading kaf file: "+fname);
+			fe.printStackTrace();
+		} */catch (Exception ioe) {
+			System.err.println("AvgRatioEstimator: error when loading kaf file: ");
+			ioe.printStackTrace();
+		}							
+		
+		return this.kafResults;
+	}
+	
+	
+	
+	
 	
 	/**
 	 * This function predicts the polarity of a text given in the Tab format. argument is the path to the tab file 

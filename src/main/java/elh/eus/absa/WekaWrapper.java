@@ -52,7 +52,7 @@ public class WekaWrapper {
 	
 	/**
 	 * @param traindata
-	 * @param id : whether the first attribute represents de instance id and should be filtered out for classifying
+	 * @param id : whether the first attribute represents the instance id and should be filtered out for classifying
 	 * @throws Exception
 	 */
 	public WekaWrapper (Instances traindata, boolean id) throws Exception
@@ -353,7 +353,7 @@ public class WekaWrapper {
         String strSummary = eval.toSummaryString();
         System.out.println(strSummary);
           
-        // Print perl class results
+        // Print per class results
         String resPerClass = eval.toClassDetailsString();
         System.out.println(resPerClass);
         

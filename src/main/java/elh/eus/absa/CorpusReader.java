@@ -24,6 +24,7 @@ import ixa.kaflib.WF;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -46,6 +47,9 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringEscapeUtils;
 import org.jdom2.Document;
 import org.jdom2.Element;
 import org.jdom2.JDOMException;
@@ -71,7 +75,7 @@ public class CorpusReader {
 	private String lang;
 	//corpus format	(semeval2014|semeval2015|tab|tabglobal)
 	private String format;
-
+	
 	
 	/**
 	 * Constructor. 
@@ -116,10 +120,26 @@ public class CorpusReader {
 				System.err.println("IO error when reading corpus file");
 			}
 		}
+		else if (format.compareTo("globalNotagged")==0)
+		{
+			try {
+				extractGlobalPolarityText(in);
+			} catch (IOException e) {
+				System.err.println("IO error when reading corpus file");
+			}
+		}
 		else if (format.compareTo("ireom")==0)
 		{
 			try {
 				readIreomSentencesToTag(in);
+			} catch (IOException e) {
+				System.err.println("IO error when reading corpus file");
+			}
+		}
+		else if (format.compareTo("tabNotagged")==0)
+		{
+			try {
+				readTabNotaggedCorpus(in);
 			} catch (IOException e) {
 				System.err.println("IO error when reading corpus file");
 			}
@@ -295,17 +315,18 @@ public class CorpusReader {
 	 */
 	public String getAllSentencesAsString() {
 		//create string with the corpus sentences.
-		String toTag = "";
+		StringBuilder toTag = new StringBuilder();
 		for (String sent : getSentences().values()) 
 		{
+			toTag.append(sent);
 			String lineEnd = "\n\n";
 			if (! sent.matches("[!?.]$"))
 			{
 				lineEnd = ".\n\n";
 			}
-			toTag=toTag+sent+lineEnd;		
+			toTag.append(lineEnd);		
 		}
-		return toTag;
+		return toTag.toString();
 	}
 	
 	/**
@@ -339,7 +360,14 @@ public class CorpusReader {
 	 * @param sentences the sentences to set
 	 */
 	public void addSentence(String id, String text) {
-		this.sentences.put(id, text);
+		this.sentences.put(id, StringEscapeUtils.unescapeHtml4(StringEscapeUtils.unescapeJava(text)));
+	}
+	
+	/**
+	 * @param sentences the sentences to set
+	 */
+	public String getSentence(String id) {
+		return this.sentences.get(id);
 	}
 
 	/**
@@ -626,7 +654,7 @@ public class CorpusReader {
 			else
 			{
 				String[] fields = line.split("\\s+");
-				if (fields.length > 3)
+				if (fields.length >= 3)				
 				{
 					line = Arrays.toString(Arrays.copyOfRange(fields,0,3)).replace(", ", "\t").replaceAll("[\\[\\]]", "");					
 				}
@@ -635,6 +663,77 @@ public class CorpusReader {
 			}
 		}// reader
 		System.err.println("CorpusReader::extractGlobalPolarityTabText -> "+oId+" reviews read.");
+	}
+	
+	/**
+	 * 	Extract documents from a corpus tagged with the global polarity of the text and create opinions
+	 *  from them. 
+	 *  
+	 *  *NOTE: in this case we treat whole documents as sentences.
+	 * 
+	 * @param fileName string: input corpus file path
+	 * @throws IOException 
+	 */
+	private void extractGlobalPolarityText(InputStream fileName) throws IOException {
+		BufferedReader creader = new BufferedReader(new InputStreamReader(fileName));   		
+		String line;
+		String rId = "";
+		String sId = ""; //sentence id
+		Integer oId = 0; //opinion id
+		String polarity = null;
+		StringBuilder sentString = new StringBuilder();
+		while ((line = creader.readLine()) != null) 
+		{
+			Pattern p = Pattern.compile("^<doc id=\"([^\"]+)\" (pol|polarity)=\"([^\"]+)\"( score=\"([^\"]+)\")?>$");
+			Matcher m = p.matcher(line);
+			if (m.matches())
+			{
+				rId = m.group(1);
+				sId = rId+"_g";
+				oId++;				
+				polarity = m.group(3);				
+				//System.err.print("\rReview num "+oId+" read");
+				continue;
+			}
+			//Text unit end, store the document
+			else if (line.matches("</doc>"))
+			{
+				/*store the sentence and the corresponding review
+				 * (in this case this info is redundant, because a whole review is represented by a sentence)  
+				 */
+				addRevSent(rId,sId);
+				//add sentence to the reader object
+				this.addSentence(sId, sentString.toString());				
+				sentString= new StringBuilder();
+				
+				if (polarity == null)
+				{
+					System.err.println("no polarity annotation for review "+rId+"."
+							+ " Review won't be taken into account, but it will be used for feature extraction"
+							+ "(n-grams) if it is specified so.");
+					continue;
+				}
+				
+				String trgt = "";
+				String cat = "global";
+				Integer offsetFrom= 0;
+				Integer offsetTo = 0;
+				
+				//create and add opinion to the structure
+				Opinion op = new Opinion("o"+oId, trgt, offsetFrom, offsetTo, polarity, cat, sId);
+				this.addOpinion(op);
+				
+				//debugging
+				//sb.append("\n\t> "+"o"+oId+" "+trgt+" "+offsetFrom+"-"+offsetTo+" "+polarity+" "+cat);		
+			}	
+			// normal annotated line add
+			else
+			{
+				//System.err.println("length: "+fields.length+" - "+line);
+				sentString.append(line+"\n");
+			}
+		}// reader
+		System.err.println("CorpusReader::extractGlobalPolarityText -> "+oId+" reviews read.");
 	}
 	
 	
@@ -696,6 +795,71 @@ public class CorpusReader {
 				//sb.append("\n\t> "+"o"+oId+" "+trgt+" "+offsetFrom+"-"+offsetTo+" "+polarity+" "+cat);				
 		}// reader
 		System.err.println("CorpusReader::readIreomSentencesToTag -> "+oId+" reviews read.");
+	}	
+	
+	
+	/**
+	 * 	Extract documents from a corpus tagged with the global polarity of the text and create opinions
+	 *  from them. The function assumes the text is PoS tagged in Conll tabulated format.
+	 *  
+	 *  *NOTE: in this case we treat whole documents as sentences.
+	 * 
+	 * @param fileName string: input corpus file path
+	 * @throws IOException 
+	 */
+	private void readTabNotaggedCorpus(InputStream fileName) throws IOException {
+		BufferedReader creader = new BufferedReader(new InputStreamReader(fileName));   		
+		String line;
+		String rId = "";
+		String sId = ""; //sentence id
+		Integer oId = 0; //opinion id
+		String polarity = null;
+		
+		while ((line = creader.readLine()) != null) 
+		{
+			StringBuilder sentString = new StringBuilder();
+			String[] fields = line.split("\\t");
+			
+			if (fields.length < 3)
+			{
+				System.err.println("CorpusReader::readIreomSentencesToTag : bad sentence format, format must be:\n"
+						+ "\t\"id<tab>polarity<tab>text[<tab>addittionalfields]\"\t"
+						+ "sentence won't be annotated.");
+				continue;
+			}
+			//first field is the Id of the sentence to tag
+			rId = fields[0];
+			sId = rId+"_g";
+			oId++;				
+			
+			//second field is the polarity of the sentence
+			polarity = fields[1];
+			
+			//third field is the text of the sentence to tag
+			/*store the sentence and the corresponding review
+			 * (in this case this info is redundant, because a whole review is represented by a sentence)  
+			 */
+			addRevSent(rId,sId);
+			sentString.append(fields[2]);
+			//add sentence to the reader object
+			this.addSentence(sId, sentString.toString());							
+
+			//System.err.print("\rReview num "+oId+" read");
+				
+			String trgt = "";
+			String cat = "global";
+			Integer offsetFrom= 0;
+			Integer offsetTo = 0;
+			
+			
+			//create and add opinion to the structure
+			Opinion op = new Opinion("o"+oId, trgt, offsetFrom, offsetTo, polarity, cat, sId);
+			this.addOpinion(op);
+				
+				//debugging
+				//sb.append("\n\t> "+"o"+oId+" "+trgt+" "+offsetFrom+"-"+offsetTo+" "+polarity+" "+cat);				
+		}// reader
+		System.err.println("CorpusReader::readTabNotagged -> "+oId+" reviews read.");
 	}	
 	
 	/**
@@ -870,7 +1034,7 @@ public class CorpusReader {
 	 * @throws IOException
 	 * @throws JDOMException
 	 */
-	public void tagSentences(String nafdir, String posModel) throws IOException, JDOMException
+	public void tagSentences(String nafdir, String posModel, boolean print) throws IOException, JDOMException
 	{				
 		KAFDocument kafinst = new KAFDocument("","");
 		for (String sId : getSentences().keySet())
@@ -884,7 +1048,7 @@ public class CorpusReader {
 			// if language is basque 'posModel' argument is used to pass the path to the basque morphological analyzer eustagger 
 			else if (lang.compareToIgnoreCase("eu")==0)
 			{
-				int ok =NLPpipelineWrapper.eustaggerCall(posModel, getSentences().get(sId), nafdir+File.separator+kafname);
+				int ok =NLPpipelineWrapper.eustaggerCall(posModel, getSentences().get(sId), nafdir+File.separator+kafname);				
 			}
 			else
 			{
@@ -892,6 +1056,13 @@ public class CorpusReader {
 				kafinst.save(kafPath);										
 			}
 			
+			if (print)
+			{
+				String toprint = "<doc id=\""+sId+"\" polarity=\""+getSentenceOpinions(sId).get(0).getPolarity()+"\">";
+				System.out.println(toprint);
+				System.out.println(IOUtils.toString(new FileInputStream(new File(kafPath))));
+				System.out.println("</doc>");
+			}
 		}		
 	}
 
@@ -927,6 +1098,40 @@ public class CorpusReader {
 			kafinst.save(kafPath);										
 		}
 		return kafPath;
+	}
+	
+	/**
+	 *  Process linguistically input sentence with ixa-pipes (tokenization and PoS tagging).
+	 *  A tagged file is generated for each sentence in the corpus and stored in the directory
+	 *  given as argument. Sentence Ids are used as file names. If a tagged file already exists 
+	 *  that sentence is not tagged 
+	 * 
+	 * @param nafdir : path to the directory were tagged files should be stored
+	 * @param posModel : model to be used by the PoS tagger
+	 * @throws IOException
+	 * @throws JDOMException
+	 */
+	public String tagSentenceTab(String sId, String nafdir, String posModel) throws IOException, JDOMException
+	{				
+		KAFDocument kafinst = new KAFDocument("","");
+		
+		String savename = sId.replace(':', '_');
+		String savePath = nafdir+File.separator+savename+".conll";			
+		if (FileUtilsElh.checkFile(savePath))
+		{
+			System.err.println("CorpusReader::tagSentence : file already there:"+savePath);
+		}
+		// if language is basque 'posModel' argument is used to pass the path to the basque morphological analyzer eustagger 
+		else if (lang.compareToIgnoreCase("eu")==0)
+		{
+			int ok =NLPpipelineWrapper.eustaggerCall(posModel, getSentences().get(sId), nafdir+File.separator+savename);
+		}
+		else
+		{
+			String conll = NLPpipelineWrapper.ixaPipesTokPosConll(getSentences().get(sId), lang, posModel);
+			FileUtils.writeStringToFile(new File(savePath), conll);										
+		}
+		return savePath;
 	}
 	
 }

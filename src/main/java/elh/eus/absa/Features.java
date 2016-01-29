@@ -27,15 +27,20 @@ import ixa.kaflib.WF;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
 import java.util.TreeSet;
 
 import weka.core.Attribute;
@@ -46,7 +51,8 @@ import weka.core.converters.ArffSaver;
 
 import java.util.Properties;
 
-import org.apache.commons.validator.routines.UrlValidator;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.jdom2.JDOMException;
 
 
@@ -84,15 +90,9 @@ public class Features {
 	private List<String> ClassificationClasses = Arrays.asList("dummy","positive","negative","neutral");  
 
 	//structure to control general polarity lexicon
-	private HashMap<String, HashMap<String,Double>> polarLexiconGen = new HashMap<String, HashMap<String,Double>>();
-
+	private Lexicon polarLexiconGen;
 	//structure to control domain polarity lexicon
-	private HashMap<String, HashMap<String,Double>> polarLexiconDom = new HashMap<String, HashMap<String,Double>>();
-	
-	//structure to control general polarity lexicon
-	private Lexicon polarLexiconGen1;
-	//structure to control domain polarity lexicon
-	private Lexicon polarLexiconDom1;
+	private Lexicon polarLexiconDom;
 	
 	// PoS tagger object. Defined here for optimizing posTagger resource loading times
 	private eus.ixa.ixa.pipe.pos.Annotate postagger;
@@ -123,6 +123,7 @@ public class Features {
 	 */
 	public Features (CorpusReader creader, String paramFile, String classes)
 	{
+		//System.err.println("Features: constructor call");	
 		this.corpus = creader;
 		this.featNum = 0;
 		setClasses(classes);
@@ -142,6 +143,7 @@ public class Features {
 				{
 					 MicrotxtNormalizer =  new MicroTextNormalizer(corpus.getLang());
 				}
+				//System.err.println("Features: initiate feature extraction from corpus");	
 				createFeatureSet();
 			} catch (IOException e) {
 				System.err.println("Features: error when loading training parameter properties");				
@@ -186,11 +188,11 @@ public class Features {
 				
 				if (FileUtilsElh.checkFile(modelPath))
 				{
-					System.err.println("Features: load features from file");				
-					createFeatureSetFromFile(modelPath);
+					createFeatureSetFromModel(modelPath);
 				}
 				else
 				{
+					System.err.println("Features: initiate feature extraction from corpus");	
 					createFeatureSet();
 				}
 			} catch (IOException e) {
@@ -267,7 +269,7 @@ public class Features {
 	 * @param model string: path to the serialized model containing header information
 	 * @throws IOException 
 	 */
-	private void createFeatureSetFromFile (String model) throws IOException
+	private void createFeatureSetFromModel (String model) throws IOException
 	{
 		try
 		{
@@ -296,11 +298,52 @@ public class Features {
 					addNominalFeature(name, vals);						
 				}				
 			}
+			
+			//General polarity lexicon
+			if (header.attribute("polLexGen_posScore")!=null)
+			{
+				this.polarLexiconGen = new Lexicon(new File(params.getProperty("polarLexiconGeneral")),"lemma");
+				System.err.println("Features : createFeatureSet() - General polarity lexicon loaded -> "
+						+params.getProperty("polarLexiconGeneral")
+						+" ("+this.polarLexiconGen.size()+" entries)");
+				System.out.println("Features : createFeatureSet() - General polarity lexicon loaded -> "
+						+params.getProperty("polarLexiconGeneral")
+						+" ("+this.polarLexiconGen.size()+" entries)");
+			}
+			
+			//Domain polarity lexicon
+			if (header.attribute("polLexDom_posScore")!=null)
+			{
+				//this.polarLexiconDom = loadPolarityLexiconFromFile(params.getProperty("polarLexiconDomain"), "polLexDom_");
+				this.polarLexiconDom = new Lexicon(new File(params.getProperty("polarLexiconDomain")),"lemma");
+				System.err.println("Features : createFeatureSet() - Domain polarity lexicon loaded -> "
+						+params.getProperty("polarLexiconDomain")
+						+" ("+this.polarLexiconDom.size()+" entries)");
+				System.out.println("Features : createFeatureSet() - Domain polarity lexicon loaded -> "
+						+params.getProperty("polarLexiconDomain")
+						+" ("+this.polarLexiconDom.size()+" entries)");	
+			}
+			
+			
+			
+			
+			// Load clark cluster category info from files
+			loadClusterFeatures("clark");
+			
+			// Load brown cluster category info from files
+			loadClusterFeatures("brown");
+
+			// Load word2vec cluster category info from files
+			loadClusterFeatures("word2vec");
+
+
+			
 		} catch (Exception e)
 		{
 			System.err.println("Features::createFeatureSetFromFile -> error when loading model header");
 			e.printStackTrace();
-		}
+		}			
+		
 	}
 	
 	/**
@@ -314,9 +357,12 @@ public class Features {
 		// create a Id attribute to link the instances to a certain opinion. Note that this attribute won't be
 		// used for classifying. It is used only for linking the instances with their corresponding opinions
 		addNumericFeature("instanceId");
+				
+		//naf paths for the tagged files		
+		String nafDir = params.getProperty("kafDir");
+		// create pos tagging dir if not exists
+		Files.createDirectories(Paths.get(nafDir));
 		
-		//kaf document used for processing the corpus for ngram extraction
-		KAFDocument kaf = new KAFDocument("","");
 		
 		// dummy variable to debug the feature loading
 		int featPos = this.featNum;
@@ -337,13 +383,40 @@ public class Features {
 			}
 		}
 
-		String corpAsString = corpus.getAllSentencesAsString();
-		if ((params.containsKey("wfngrams") || params.containsKey("lemmaNgrams")) &&
-				(! params.getProperty("normalization", "none").equalsIgnoreCase("noEmot")))
-		{
-			corpAsString = normalize(corpAsString, params.getProperty("normalization", "none"));
-		}
+		Set<String> corpSentenceIds = corpus.getSentences().keySet();
 		
+		//Corpus tagging, if the corpus is not in conll tabulated format
+        if (corpus.getFormat().equalsIgnoreCase("tabNotagged") || !corpus.getFormat().startsWith("tab"))
+        {
+        	if ((params.containsKey("lemmaNgrams") || (params.containsKey("pos") && !params.getProperty("pos").equalsIgnoreCase("0")))
+        			&& (corpus.getLang().compareToIgnoreCase("eu")!=0))
+        	{
+        		Properties posProp = NLPpipelineWrapper.setPostaggerProperties( params.getProperty("pos-model"),
+        				corpus.getLang(), "3", "bin", "false");					
+        		postagger = new eus.ixa.ixa.pipe.pos.Annotate(posProp);						
+        	}
+
+        	
+        	for (String key : corpSentenceIds)
+        	{
+        		String currentSent = corpus.getSentence(key);		
+        		if ((params.containsKey("wfngrams") || params.containsKey("lemmaNgrams")) &&
+        				(! params.getProperty("normalization", "none").equalsIgnoreCase("noEmot")))
+        		{
+        			currentSent = normalize(currentSent, params.getProperty("normalization", "none"));
+        		}
+
+        		String nafPath = nafDir+File.separator+key.replace(':', '_');	
+
+        		try {
+        			String taggedPath = NLPpipelineWrapper.tagSentence(currentSent, nafPath, corpus.getLang(),  params.getProperty("pos-model"), postagger);
+        		} catch (JDOMException e) {
+        			System.err.println("Features::createFeatureSet -> NAF error when tagging sentence");
+        			e.printStackTrace();
+        		}
+        		//System.err.println("Features::createFeatureSet -> corpus normalization step done");						
+        	}
+        }
 		// word form ngram features
 		if (params.containsKey("wfngrams"))
 		{	
@@ -357,7 +430,7 @@ public class Features {
 					System.err.println("Features::createFeatureSet() - provided word form minimum frequency "
 							+ "is not an integer. Default value 1 will be used");
 				}				
-			}
+			}			
 			
 			File test = new File(params.getProperty("wfngrams"));
 			// If the word form ngram list is stored in a file.
@@ -366,26 +439,33 @@ public class Features {
 				loadAttributeListFromFile(test,"wf");
 			}
 			// If the corpus is in conll tabulated format
-			else if (corpus.getFormat().startsWith("tab"))
+			else if (corpus.getFormat().startsWith("tab") && !corpus.getFormat().equalsIgnoreCase("tabNotagged"))
 			{
 				// N-gram Feature vector : extracted from sentences
 				int success = extractNgramsTAB(Integer.valueOf(params.getProperty("wfngrams")), "wf", discardPos, true);
 				addNumericFeatureSet("", wfNgrams, wfMinFreq);
 			}
-			// Otherwise tag it with ixa-pipes 
+			// Otherwise  use previously tagged files with ixa-pipes 
 			else
 			{
-				try {
-					kaf = NLPpipelineWrapper.ixaPipesTok(corpAsString, corpus.getLang());
-
-					// N-gram Feature vector : extracted from sentences
-					int success = extractWfNgramsKAF(Integer.valueOf(params.getProperty("wfngrams")), kaf, true);
-					addNumericFeatureSet("", wfNgrams, wfMinFreq);
-
-				} catch (JDOMException e) {
-					e.printStackTrace();
-					System.err.println("Features : createFeatureSet() - wf ngram features -> error when processing nlp chain");					
-				}				
+				int wfNgramsLength=Integer.valueOf(params.getProperty("wfngrams"));
+				System.err.println("Features::createFeatureSet -> word from ngram extraction ("+wfNgramsLength+")-grams)...");
+				for (String key : corpSentenceIds)
+				{
+					String nafPath = nafDir+File.separator+key.replace(':', '_')+".kaf";
+					//eu tagged files are conll format
+					if (corpus.getLang().equalsIgnoreCase("eu"))
+					{
+						int success = extractNgramsTABString(new FileInputStream(new File(nafPath)), wfNgramsLength, "wf", discardPos, true);
+					}
+					else
+					{
+						KAFDocument naf = KAFDocument.createFromFile(new File(nafPath));
+						// N-gram Feature vector : extracted from sentences
+						int success = extractWfNgramsKAF(Integer.valueOf(params.getProperty("wfngrams")), naf, true);			
+					}	
+				}
+				addNumericFeatureSet("", wfNgrams, wfMinFreq);
 			}
 
 			System.err.println("Features : createFeatureSet() - unigram features -> "+(this.featNum-featPos));
@@ -415,37 +495,33 @@ public class Features {
 				loadAttributeListFromFile(test,"lemmaNgrams");
 			}
 			// If the corpus is in conll tabulated format
-			else if (corpus.getFormat().startsWith("tab"))
+			else if (corpus.getFormat().startsWith("tab") && !corpus.getFormat().equalsIgnoreCase("tabNotagged"))
 			{
 				// N-gram Feature vector : extracted from sentences
 				int success = extractNgramsTAB(Integer.valueOf(params.getProperty("lemmaNgrams")), "lemma", discardPos, true);
 				addNumericFeatureSet("", lemmaNgrams, lemmaMinFreq);
 			}
-			// Otherwise tag it with ixa-pipes 
+			// Otherwise  use previously tagged files with ixa-pipes 
 			else
 			{
-				String posModelPath = params.getProperty("pos-model");
-				try {
-					if (params.containsKey("wfngrams"))
+				int lemmaNgramsLength=Integer.valueOf(params.getProperty("lemmaNgrams"));
+				System.err.println("Features::createFeatureSet -> lemma ngram extraction ("+lemmaNgramsLength+"-grams)...");
+				for (String key : corpSentenceIds)
+				{
+					String nafPath = nafDir+File.separator+key.replace(':', '_')+".kaf";
+					//eu tagged files are conll format
+					if (corpus.getLang().equalsIgnoreCase("eu"))
 					{
-						kaf = NLPpipelineWrapper.ixaPipesPos(kaf, posModelPath);
+						int success = extractNgramsTABString(new FileInputStream(new File(nafPath)), lemmaNgramsLength, "lemma", discardPos, true);
 					}
 					else
 					{
-						kaf = NLPpipelineWrapper.ixaPipesTokPos(corpAsString, corpus.getLang(), posModelPath);
+						KAFDocument naf = KAFDocument.createFromFile(new File(nafPath));
+						// N-gram Feature vector : extracted from sentences
+						int success = extractLemmaNgrams(Integer.valueOf(params.getProperty("lemmaNgrams")), naf, discardPos, true);
 					}
-
-					// Unigram Feature vector : extracted from sentences
-					if (Integer.valueOf(params.getProperty("lemmaNgrams"))>0)
-					{
-						int success = extractLemmaNgrams(Integer.valueOf(params.getProperty("lemmaNgrams")), kaf, discardPos, true);
-						addNumericFeatureSet("", lemmaNgrams, lemmaMinFreq);
-					}
-									
-				} catch (JDOMException e) {
-					e.printStackTrace();
-					System.err.println("Features : createFeatureSet() - lemma ngram features -> error when processing nlp chain");					
-				}				
+				} 			
+				addNumericFeatureSet("", lemmaNgrams, lemmaMinFreq);					
 			}
 			System.out.println("Features : createFeatureSet() - lemma ngram features -> "+(this.featNum-featPos));
 			System.err.println("Features : createFeatureSet() - lemma ngram features -> "+(this.featNum-featPos));
@@ -456,50 +532,41 @@ public class Features {
 		{	
 			featPos = this.featNum;
 			File test = new File(params.getProperty("pos"));
+			String conll ="";
 			// if POS ngrams are stored in a file
 			if (test.isFile())
 			{
 				loadAttributeListFromFile(test,"POS_");
 			}
 			// If the corpus is in conll tabulated format
-			else if (corpus.getFormat().startsWith("tab"))
+			else if (corpus.getFormat().startsWith("tab") && !corpus.getFormat().equalsIgnoreCase("tabNotagged"))
 			{
 				// N-gram Feature vector : extracted from sentences
 				int success = extractNgramsTAB(Integer.valueOf(params.getProperty("pos")), "pos", discardPos, true);
 				addNumericFeatureSet("", POSNgrams, 1);
 			}
-			// Otherwise tag it with ixa-pipes 
+			// Otherwise  use previously tagged files with ixa-pipes 
 			else
 			{
-				if (! params.containsKey("lemmaNgrams"))
+				int posNgramLength= Integer.valueOf(params.getProperty("pos"));
+				System.err.println("Features::createFeatureSet -> pos ngram extraction ("+posNgramLength+"-grams)...");
+				for (String key : corpSentenceIds)
 				{
-					String posModelPath = params.getProperty("pos-model");
-					try {
-						if (params.containsKey("wfngrams"))
-						{
-							kaf = NLPpipelineWrapper.ixaPipesPos(kaf, posModelPath);
-						}
-						else
-						{
-							kaf = NLPpipelineWrapper.ixaPipesTokPos(corpAsString, corpus.getLang(), posModelPath);
-						}
-					
-						// POS tag attributes Feature vector : extracted from sentences
-						int success = extractPosNgrams(Integer.valueOf(params.getProperty("pos")), kaf, discardPos, true);
-						addNumericFeatureSet("", POSNgrams, 1);
-					
-					} catch (JDOMException e) {
-						e.printStackTrace();
-						System.err.println("Features : createFeatureSet() - pos tag features -> error when processing nlp chain");					
+					String nafPath = nafDir+File.separator+key.replace(':', '_')+".kaf";
+					//eu tagged files are conll format
+					if (corpus.getLang().equalsIgnoreCase("eu"))
+					{
+						int success = extractNgramsTABString(new FileInputStream(new File(nafPath)), posNgramLength, "pos", discardPos, true);
 					}
-				}
-				else
-				{
-					// Unigram Feature vector : extracted from sentences
-					int success = extractPosNgrams(Integer.valueOf(params.getProperty("pos")), kaf, discardPos, true);
-					addNumericFeatureSet("", POSNgrams, 0);
-				}
-				
+					else
+					{
+						KAFDocument naf = KAFDocument.createFromFile(new File(nafPath));
+						// N-gram Feature vector : extracted from sentences
+						int success = extractPosNgrams(Integer.valueOf(params.getProperty("pos")), naf, discardPos, true);
+					}
+					
+				} 							
+				addNumericFeatureSet("", POSNgrams, 1);
 			}
 			System.out.println("Features : createFeatureSet() - pos tag features -> "+(this.featNum-featPos));
 			System.err.println("Features : createFeatureSet() - pos tag features -> "+(this.featNum-featPos));
@@ -507,59 +574,13 @@ public class Features {
 		
 		
 		// Load clark cluster category info from files
-		HashMap<String, Integer> clarkcl = new HashMap<String, Integer>();
-		if (params.containsKey("clark"))
-		{
-			featPos = this.featNum;
-			clarkcl = loadAttributeMapFromFile(params.getProperty("clark"), "ClarkClId_");
-			if (clarkcl.isEmpty())
-			{
-				params.remove("clark");
-			}
-			else
-			{
-				attributeSets.put("ClarkCl", clarkcl);
-			}
-
-			System.err.println("Features : createFeatureSet() - clark cluster features -> "+(this.featNum-featPos));
-			System.out.println("Features : createFeatureSet() - clark cluster features -> "+(this.featNum-featPos));
-		}
+		loadClusterFeatures("clark");
 		
 		// Load brown cluster category info from files
-		HashMap<String, Integer> browncl = new HashMap<String, Integer>();
-		if (params.containsKey("brown"))
-		{
-			featPos = this.featNum;
-			browncl = loadAttributeMapFromFile(params.getProperty("brown"), "BrownClId_");
-			if (browncl.isEmpty())
-			{
-				params.remove("brown");
-			}
-			else
-			{
-				attributeSets.put("BrownCl", browncl);
-			}
-			System.err.println("Features : createFeatureSet() - brown cluster features -> "+(this.featNum-featPos));
-			System.out.println("Features : createFeatureSet() - brown cluster features -> "+(this.featNum-featPos));
-		}
+		loadClusterFeatures("brown");
 
 		// Load word2vec cluster category info from files
-		HashMap<String, Integer> w2vcl = new HashMap<String, Integer>();
-		if (params.containsKey("word2vec"))
-		{
-			featPos = this.featNum;
-			w2vcl = loadAttributeMapFromFile(params.getProperty("word2vec"), "w2vClId_");
-			if (w2vcl.isEmpty())
-			{
-				params.remove("word2vec");
-			}
-			else
-			{
-				attributeSets.put("w2vCl", w2vcl);
-			}
-			System.err.println("Features : createFeatureSet() - word2vec cluster features -> "+(this.featNum-featPos));
-			System.out.println("Features : createFeatureSet() - word2vec cluster features -> "+(this.featNum-featPos));
-		}
+		loadClusterFeatures("word2vec");
 
 		// add sentence length as feature
 		if (! params.getProperty("sentenceLength", "no").equalsIgnoreCase("no"))
@@ -615,19 +636,23 @@ public class Features {
 		if (params.containsKey("polarLexiconGeneral") && FileUtilsElh.checkFile(params.getProperty("polarLexiconGeneral")))
 		{
 			//this.polarLexiconGen = loadPolarityLexiconFromFile(params.getProperty("polarLexiconGeneral"), "polLexGen_");
-			this.polarLexiconGen1 = new Lexicon(new File(params.getProperty("polarLexiconGeneral")),"lemma");
+			this.polarLexiconGen = new Lexicon(new File(params.getProperty("polarLexiconGeneral")),"lemma");
 			
-			System.err.println("Features : createFeatureSet() - General polarity lexicon loaded -> "+params.getProperty("polarLexiconGeneral"));
-			System.out.println("Features : createFeatureSet() - General polarity lexicon loaded -> "+params.getProperty("polarLexiconGeneral"));
+			System.err.println("Features : createFeatureSet() - General polarity lexicon loaded -> "
+							+params.getProperty("polarLexiconGeneral")
+							+" ("+this.polarLexiconGen.size()+" entries)");
+			System.out.println("Features : createFeatureSet() - General polarity lexicon loaded -> "
+							+params.getProperty("polarLexiconGeneral")
+							+" ("+this.polarLexiconGen.size()+" entries)");
 			
 			if (params.containsKey("polNgrams") && !params.getProperty("polNgrams").equalsIgnoreCase("no"))
 			{
-				for (String s : this.polarLexiconGen1.getEntrySet())
+				for (String s : this.polarLexiconGen.getEntrySet())
 				{
 					addNumericFeature("polgen_"+s);
 				}
-				System.err.println("Features : createFeatureSet() - General polarity lexicon lemmas loaded. -> "+this.polarLexiconGen1.size());
-				System.out.println("Features : createFeatureSet() - General polarity lexicon lemmas loaded. -> "+this.polarLexiconGen1.size());		
+				System.err.println("Features : createFeatureSet() - General polarity lexicon lemmas loaded. -> "+this.polarLexiconGen.size());
+				System.out.println("Features : createFeatureSet() - General polarity lexicon lemmas loaded. -> "+this.polarLexiconGen.size());		
 
 			}
 			
@@ -640,18 +665,22 @@ public class Features {
 		if (params.containsKey("polarLexiconDomain") && FileUtilsElh.checkFile(params.getProperty("polarLexiconDomain")))
 		{
 			//this.polarLexiconDom = loadPolarityLexiconFromFile(params.getProperty("polarLexiconDomain"), "polLexDom_");
-			this.polarLexiconDom1 = new Lexicon(new File(params.getProperty("polarLexiconDomain")),"lemma");
-			System.err.println("Features : createFeatureSet() - Domain polarity lexicon loaded -> "+params.getProperty("polarLexiconDomain"));
-			System.out.println("Features : createFeatureSet() - Domain polarity lexicon loaded -> "+params.getProperty("polarLexiconDomain"));		
+			this.polarLexiconDom = new Lexicon(new File(params.getProperty("polarLexiconDomain")),"lemma");
+			System.err.println("Features : createFeatureSet() - Domain polarity lexicon loaded -> "
+							+params.getProperty("polarLexiconDomain")
+							+" ("+this.polarLexiconDom.size()+" entries)");
+			System.out.println("Features : createFeatureSet() - Domain polarity lexicon loaded -> "
+					+params.getProperty("polarLexiconDomain")
+					+" ("+this.polarLexiconDom.size()+" entries)");		
 			
 			if (params.containsKey("polNgrams") && !params.getProperty("polNgrams").equalsIgnoreCase("no"))
 			{
-				for (String s : this.polarLexiconDom1.getEntrySet())
+				for (String s : this.polarLexiconDom.getEntrySet())
 				{
 					addNumericFeature("poldom_"+s);
 				}
-				System.err.println("Features : createFeatureSet() - Domain polarity lexicon lemmas loaded -> "+this.polarLexiconDom.keySet().size());
-				System.out.println("Features : createFeatureSet() - Domain polarity lexicon lemmas loaded -> "+this.polarLexiconDom.keySet().size());		
+				System.err.println("Features : createFeatureSet() - Domain polarity lexicon lemmas loaded -> "+this.polarLexiconDom.size());
+				System.out.println("Features : createFeatureSet() - Domain polarity lexicon lemmas loaded -> "+this.polarLexiconDom.size());		
 
 			}
 			
@@ -666,6 +695,28 @@ public class Features {
 		{
 			// Declare the class attribute along with its values			
 			addNominalFeature("polarityCat", this.ClassificationClasses);			
+		}
+	}
+	
+		
+	private void loadClusterFeatures (String clname) throws IOException{
+		// Load clark cluster category info from files
+		HashMap<String, Integer> clMap = new HashMap<String, Integer>();
+		if (params.containsKey("clark"))
+		{
+			int featPos = this.featNum;
+			clMap = loadAttributeMapFromFile(params.getProperty(clname), clname+"ClId_");
+			if (clMap.isEmpty())
+			{
+				params.remove(clname);
+			}
+			else
+			{
+				attributeSets.put(clname+"Cl", clMap);
+			}
+
+			System.err.println("Features : loadClusterFeatures() - "+clname+" cluster features -> "+(this.featNum-featPos));
+			System.out.println("Features : loadClusterFeatures() -  "+clname+" cluster features -> "+(this.featNum-featPos));
 		}
 	}
 	
@@ -738,44 +789,46 @@ public class Features {
 			
 			// string normalization (emoticons, twitter grammar,...)
 			if ((params.containsKey("wfngrams") || params.containsKey("lemmaNgrams")) &&
-					(params.containsKey("normalization")))
+						(! params.getProperty("normalization", "none").equalsIgnoreCase("noEmot")))
 			{
 				opNormalized = normalize(opNormalized, params.getProperty("normalization", "none"));
 			}
 			
 			
 			//process the current instance with the NLP pipeline in order to get token and lemma|pos features
-			KAFDocument kafinst = new KAFDocument("","");
-			String kafname = trainExamples.get(oId).getsId().replace(':', '_');
-			String kafPath =params.getProperty("kafDir")+File.separator+kafname+".kaf";
+			KAFDocument nafinst = new KAFDocument("","");
+			String nafname = trainExamples.get(oId).getsId().replace(':', '_');
+			String nafDir = params.getProperty("kafDir");
+			String nafPath = nafDir+File.separator+nafname+".kaf";			
 			//counter for opinion sentence token number. Used for computing relative values of the features
 			int tokNum=1;
 			try {
 				if (params.containsKey("lemmaNgrams")) //(lemmaNgrams != null) && (!lemmaNgrams.isEmpty()))
 				{						
-					if (FileUtilsElh.checkFile(kafPath))
+					if (FileUtilsElh.checkFile(nafPath))
 					{
-						kafinst = KAFDocument.createFromFile(new File(kafPath));						
+						nafinst = KAFDocument.createFromFile(new File(nafPath));						
 					}
 					else
 					{
-						kafinst = NLPpipelineWrapper.ixaPipesTokPos(opNormalized, corpus.getLang(),  params.getProperty("pos-model"), postagger);
-						kafinst.save(kafPath);						
+						nafinst = NLPpipelineWrapper.ixaPipesTokPos(opNormalized, corpus.getLang(),  params.getProperty("pos-model"), postagger);
+						Files.createDirectories(Paths.get(nafDir));
+						nafinst.save(nafPath);						
 					}
-					tokNum = kafinst.getWFs().size();
+					tokNum = nafinst.getWFs().size();
 					//System.err.println("Features::loadInstances - postagging opinion sentence ("+oId+") - "+corpus.getOpinionSentence(oId));
 				}
 				else
 				{
-					if (FileUtilsElh.checkFile(kafPath))
+					if (FileUtilsElh.checkFile(nafPath))
 					{
-						kafinst = KAFDocument.createFromFile(new File(kafPath));
+						nafinst = KAFDocument.createFromFile(new File(nafPath));
 					}
 					else
 					{
-						kafinst = NLPpipelineWrapper.ixaPipesTok(opNormalized,corpus.getLang());						
+						nafinst = NLPpipelineWrapper.ixaPipesTok(opNormalized,corpus.getLang());						
 					}
-					tokNum = kafinst.getWFs().size();
+					tokNum = nafinst.getWFs().size();
 					//System.err.println("Features::loadInstances - tokenizing opinion sentence ("+oId+") - "+corpus.getOpinionSentence(oId));
 
 				}
@@ -801,7 +854,7 @@ public class Features {
 			}
 			
 			
-			List<WF> window = kafinst.getWFs();
+			List<WF> window = nafinst.getWFs();
 			Integer end = corpus.getOpinion(oId).getTo();
 			// apply window if window active (>0) and if the target is not null (to=0)
 			if ((bowWin > 0) && (end > 0))
@@ -832,11 +885,16 @@ public class Features {
 			
 			//System.out.println("Sentence: "+corpus.getOpinionSentence(oId)+" - target: "+corpus.getOpinion(oId).getTarget()+
 			//		"\n window: from-> "+window.get(0).getForm()+" to-> "+window.get(window.size()-1)+" .\n");
+
 			
+			List<String> windowWFIds = new ArrayList<String>();
+
 			// word form ngram related features
 			for (WF wf : window)
 			{	
-				String wfStr = wf.getForm();
+				windowWFIds.add(wf.getId());
+				
+				String wfStr = wf.getForm();				
 				if (params.containsKey("wfngrams") && ngramDim > 0)
 				{
 					if (! savePath.contains("_wf"+ngramDim))
@@ -910,8 +968,8 @@ public class Features {
 				{
 					posNgramDim = Integer.valueOf(params.getProperty("pos"));
 				}
-								
-				for (Term t : kafinst.getTermsByWFs(window))
+										
+				for (Term t : nafinst.getTermsFromWFs(windowWFIds))
 				{	
 					//lemmas // && (!params.getProperty("lemmaNgrams").equalsIgnoreCase("0"))
 					if ((params.containsKey("lemmaNgrams")) || params.containsKey("polarLexiconGeneral") || params.containsKey("polarLexiconDomain"))
@@ -1429,6 +1487,377 @@ public class Features {
 	}
 	
 
+	/**
+	 *   Function fills the attribute vectors for the instances existing in the Conll tabulated formatted corpus given. 
+	 *   Attribute vectors contain the features loaded by the creatFeatureSet() function.
+	 * 
+	 * @param boolean save : whether the Instances file should be saved to an arff file or not.
+	 * @return Weka Instances object containing the attribute vectors filled with the features specified
+	 * 			in the parameter file.
+	 */
+	public Instances loadInstancesConll (boolean save, String prefix)
+	{
+		String savePath = params.getProperty("fVectorDir")+File.separator+"arff"+File.separator+"train_"+prefix;
+		HashMap<String, Opinion> trainExamples = corpus.getOpinions();
+			
+		String nafdir = params.getProperty("kafDir");
+		int trainExamplesNum = trainExamples.size();
+
+		int bowWin=0;
+		if (params.containsKey("window"))
+		{
+			bowWin = Integer.parseInt(params.getProperty("window"));
+			savePath = savePath+"_w"+bowWin;		
+		}
+		
+		//System.out.println("train examples: "+trainExamplesNum);
+		//Create the Weka object for the training set
+        Instances rsltdata = new Instances("train", atts, trainExamplesNum);
+        
+        // setting class attribute (last attribute in train data.
+        //traindata.setClassIndex(traindata.numAttributes() - 1);
+		
+		System.err.println("Features: loadInstancesConll() - featNum: "+this.featNum+" - trainset attrib num -> "+rsltdata.numAttributes()+" - ");
+		System.out.println("Features: loadInstancesConll() - featNum: "+this.featNum+" - trainset attrib num -> "+rsltdata.numAttributes()+" - ");
+				
+		int instId = 1;
+		// fill the vectors for each training example
+		for (String oId : trainExamples.keySet())
+		{									
+			//System.err.println("sentence: "+ corpus.getOpinionSentence(o.getId()));
+			
+			//value vector
+			double[] values = new double[featNum];
+			
+			// first element is the instanceId			
+			values[rsltdata.attribute("instanceId").index()] = instId;  
+			
+			
+			
+			LinkedList<String> ngrams = new LinkedList<String>();
+			int ngramDim;
+			try {
+				ngramDim = Integer.valueOf(params.getProperty("wfngrams"));			
+			} catch (Exception e){
+				ngramDim = 0;
+			}
+			
+			boolean polNgrams=false;
+			if (params.containsKey("polNgrams"))
+			{
+				polNgrams=params.getProperty("polNgrams").equalsIgnoreCase("yes");
+			}
+			
+			String nafPath = nafdir+File.separator+trainExamples.get(oId).getsId().replace(':', '_');
+			String taggedFile ="";
+			try {
+				if (!FileUtilsElh.checkFile(nafPath+".kaf"))
+				{	
+        			nafPath = NLPpipelineWrapper.tagSentence(corpus.getOpinionSentence(oId), nafPath, corpus.getLang(),  params.getProperty("pos-model"), postagger);
+				}
+				else
+				{
+					nafPath =nafPath+".kaf";
+				}
+				InputStream reader = new FileInputStream(new File(nafPath));
+				taggedFile = IOUtils.toString(reader); 
+				reader.close();				
+			} catch (IOException | JDOMException fe) {
+				// TODO Auto-generated catch block
+				fe.printStackTrace();
+			} 
+			
+			String[] noWindow = taggedFile.split("\n");
+			
+			//counter for opinion sentence token number. Used for computing relative values of the features
+			int tokNum=noWindow.length;
+			
+			//System.err.println("Features::loadInstancesConll - tagged File read lines:"+tokNum);
+			
+			List<String> window = Arrays.asList(noWindow); 
+			Integer end = corpus.getOpinion(oId).getTo();		
+			// apply window if window active (>0) and if the target is not null (to=0)
+			if ((bowWin > 0) && (end > 0))
+			{
+				Integer start = corpus.getOpinion(oId).getFrom();
+				Integer from = start - bowWin;
+				if (from < 0)
+				{
+					from = 0;
+				}
+				Integer to = end+bowWin;
+				if (to > noWindow.length-1)
+				{
+					to = noWindow.length-1;
+				}
+				window = Arrays.asList(Arrays.copyOfRange(noWindow, from, to));
+			}
+			
+			//System.out.println("Sentence: "+corpus.getOpinionSentence(oId)+" - target: "+corpus.getOpinion(oId).getTarget()+
+			//		"\n window: from-> "+window.get(0).getForm()+" to-> "+window.get(window.size()-1)+" .\n");
+			
+			//System.err.println(Arrays.toString(window.toArray()));
+			
+			// word form ngram related features
+			for (String wf : window)
+			{					
+				String[] fields = wf.split("\\s"); 
+				String wfStr = normalize(fields[0], params.getProperty("normalization", "none"));
+				// blank line means we found a sentence end. Empty n-gram list and reiniciate.  
+				if (wf.equals(""))
+				{
+					// add ngrams to the feature vector
+					checkNgramFeatures(ngrams, values, "", 1, true); //toknum
+					
+					// since wf is empty no need to check for clusters and other features.
+					continue;
+				}
+				
+				
+				if (params.containsKey("wfngrams") && ngramDim > 0)
+				{
+					if (! savePath.contains("_wf"+ngramDim))
+					{
+						savePath = savePath+"_wf"+ngramDim;
+					}
+					//if the current word form is in the ngram list activate the feature in the vector
+					if (ngrams.size() >= ngramDim)
+					{
+						ngrams.removeFirst();
+					}
+					ngrams.add(wfStr);
+
+					// add ngrams to the feature vector
+					checkNgramFeatures(ngrams, values, "", 1, false); //toknum
+				}
+				// Clark cluster info corresponding to the current word form
+				if (params.containsKey("clark") && attributeSets.get("ClarkCl").containsKey(wfStr))
+				{
+					if (! savePath.contains("_cl"))
+					{
+						savePath = savePath+"_cl";
+					}
+					values[rsltdata.attribute("ClarkClId_"+attributeSets.get("ClarkCl").get(wfStr)).index()]++;					
+				}
+				
+				// Clark cluster info corresponding to the current word form
+				if (params.containsKey("brown") && attributeSets.get("BrownCl").containsKey(wfStr))
+				{
+					if (! savePath.contains("_br"))
+					{
+						savePath = savePath+"_br";
+					}
+					values[rsltdata.attribute("BrownClId_"+attributeSets.get("BrownCl").get(wfStr)).index()]++;
+				}
+				
+				// Clark cluster info corresponding to the current word form
+				if (params.containsKey("word2vec") && attributeSets.get("w2vCl").containsKey(wfStr))
+				{
+					if (! savePath.contains("_w2v"))
+					{
+						savePath = savePath+"_w2v";
+					}
+					values[rsltdata.attribute("w2vClId_"+attributeSets.get("w2vCl").get(wfStr)).index()]++;
+				}
+
+			}
+			
+			//empty ngram list and add remaining ngrams to the feature list
+			checkNgramFeatures(ngrams, values, "", 1, true); //toknum
+			
+			// PoS tagger related attributes: lemmas and pos tags
+			if (params.containsKey("lemmaNgrams") || 
+					(params.containsKey("pos") && !params.getProperty("pos").equalsIgnoreCase("0")) ||
+					params.containsKey("polarLexiconGeneral") ||
+					params.containsKey("polarLexiconDomain"))
+			{
+				ngrams = new LinkedList<String>();
+				if (params.containsKey("lemmaNgrams")&& (!params.getProperty("lemmaNgrams").equalsIgnoreCase("0")))
+				{
+					ngramDim = Integer.valueOf(params.getProperty("lemmaNgrams"));
+				}
+				else
+				{
+					ngramDim = 3;
+				}
+				LinkedList<String> posNgrams = new LinkedList<String>();
+				int posNgramDim =0;
+				if (params.containsKey("pos"))
+				{
+					posNgramDim = Integer.valueOf(params.getProperty("pos"));
+				}
+								
+				for (String t : window)
+				{						
+					//lemmas // && (!params.getProperty("lemmaNgrams").equalsIgnoreCase("0"))
+					if ((params.containsKey("lemmaNgrams")) || params.containsKey("polarLexiconGeneral") || params.containsKey("polarLexiconDomain"))
+					{
+						if (! savePath.contains("_l"+ngramDim))
+						{
+							savePath = savePath+"_l"+ngramDim;
+						}
+						
+						//blank line means we found a sentence end. Empty n-gram list and reiniciate.
+						if (t.equals(""))
+						{
+							// check both lemma n-grams and polarity lexicons, and add values to the feature vector
+							checkNgramsAndPolarLexicons(ngrams, values, "lemma", 1,tokNum, true, polNgrams); //toknum
+														
+							// since t is empty no need to check for clusters and other features.
+							continue;
+						}
+						
+						String[] fields = t.split("\\s");
+						if (fields.length < 2)
+						{
+							continue;
+						}
+						String lemma = normalize(fields[1], params.getProperty("normalization", "none"));
+						
+						
+						if (ngrams.size() >= ngramDim)
+						{
+							ngrams.removeFirst();
+						}
+						ngrams.add(lemma);
+				       
+						// check both lemma n-grams and polarity lexicons, and add values to the feature vector
+						checkNgramsAndPolarLexicons(ngrams, values, "lemma", 1,tokNum, false, polNgrams);
+
+					}
+					
+					//pos tags
+					if (params.containsKey("pos") && !params.getProperty("pos").equalsIgnoreCase("0"))
+					{
+						if (! savePath.contains("_p"))
+						{
+							savePath = savePath+"_p";
+						}
+						
+						if (posNgrams.size() >= posNgramDim)
+						{
+							posNgrams.removeFirst();
+						}
+						
+						String[] fields = t.split("\\s");
+						if (fields.length < 3)
+						{
+							continue;
+						}
+						String pos = fields[2];
+						
+						
+						posNgrams.add(pos);
+						
+						// add ngrams to the feature vector
+						checkNgramFeatures(posNgrams, values, "pos", 1, false);
+					}										
+				} //endFor
+				
+				//empty ngram list and add remaining ngrams to the feature list
+				// check both lemma n-grams and polarity lexicons, and add values to the feature vector
+				checkNgramsAndPolarLexicons(ngrams, values,"", 1,tokNum, true, polNgrams);
+				
+				//empty pos ngram list and add remaining pos ngrams to the feature list
+				checkNgramFeatures(posNgrams, values, "pos", 1, true);
+			
+			}						
+			
+			// add sentence length as a feature
+			if (params.containsKey("sentenceLength") && (! params.getProperty("sentenceLength").equalsIgnoreCase("no")))
+			{				
+				values[rsltdata.attribute("sentenceLength").index()]=tokNum;
+			}
+			
+			// compute uppercase ratio before normalization (if needed)		
+			//double upRatio =0.0;
+			//if (params.getProperty("upperCaseRatio", "no").equalsIgnoreCase("yes"))
+			//{
+			//	String upper = opNormalized.replaceAll("[a-z]", "");
+			//	upRatio = (double)upper.length() / (double)opNormalized.length();
+			//	values[rsltdata.attribute("upperCaseRation").index()] = upRatio;
+			//}
+			
+			
+			
+			
+			
+			//create object for the current instance and associate it with the current train dataset.			
+			Instance inst = new SparseInstance(1.0, values);
+			inst.setDataset(rsltdata);
+			
+			// add category attributte values
+			String cat = trainExamples.get(oId).getCategory();
+		
+			if (params.containsKey("categories") && params.getProperty("categories").compareTo("E&A")==0)
+			{
+				if (cat.compareTo("NULL")==0)
+				{
+					inst.setValue(rsltdata.attribute("entCat").index(), cat);
+					inst.setValue(rsltdata.attribute("attCat").index(), cat);	
+				}
+				else
+				{
+					String[] splitCat = cat.split("#");
+					inst.setValue(rsltdata.attribute("entCat").index(), splitCat[0]);
+					inst.setValue(rsltdata.attribute("attCat").index(), splitCat[1]);
+				}
+				
+				//inst.setValue(attIndexes.get("entAttCat"), cat);
+			}
+			else if (params.containsKey("categories") && params.getProperty("categories").compareTo("E#A")==0)
+			{
+				inst.setValue(rsltdata.attribute("entAttCat").index(), cat);
+			}
+			
+			
+			if (params.containsKey("polarity") && params.getProperty("polarity").compareTo("yes")==0)
+			{
+				// add class value as a double (Weka stores all values as doubles )
+				String pol = normalizePolarity(trainExamples.get(oId).getPolarity());
+				if (pol != null && !pol.isEmpty())
+				{
+					inst.setValue(rsltdata.attribute("polarityCat"), pol);
+				}
+				else
+				{
+					//System.err.println("polarity: _"+pol+"_");
+					inst.setMissing(rsltdata.attribute("polarityCat"));
+				}
+			}
+			
+			//add instance to train data
+			rsltdata.add(inst);
+						
+			//store opinion Id and instance Id
+			this.opInst.put(oId, instId);
+			instId++;
+		}
+
+		System.err.println("Features : loadInstancesConll() - training data ready total number of examples -> "+trainExamplesNum+
+				" - "+rsltdata.numInstances());
+		
+		if (save)
+		{
+			try {		
+				savePath = savePath+".arff";
+				System.err.println("arff written to: "+savePath);
+				ArffSaver saver = new ArffSaver();
+		
+				saver.setInstances(rsltdata);
+		
+				saver.setFile(new File(savePath));					
+				saver.writeBatch();			 
+			} catch (IOException e1) {			
+				e1.printStackTrace();
+			} catch (Exception e2) {
+				e2.printStackTrace();
+			}
+		}
+		
+		return rsltdata;
+	}
+	
 	
 	/**
 	 * normalizePolarity maps polarity categories to the categories defined in this.classificationClasses;
@@ -1438,12 +1867,19 @@ public class Features {
 	 */
 	private String normalizePolarity(String polarity) {
 		
+		if (polarity==null)
+		{
+			return null;
+		}
 		// normalize all 
 		polarity = polarity.replaceFirst("^(?i)pos(\\+)?$", "positive$1");
 		polarity = polarity.replaceFirst("^(?i)neg(\\+)?$", "negative$1");
 		polarity = polarity.replaceFirst("^(?i)p(\\+)?$", "positive$1");
 		polarity = polarity.replaceFirst("^(?i)n(\\+)?$", "negative$1");
 		polarity = polarity.replaceFirst("^(?i)neu$", "neutral");
+		polarity = polarity.replaceFirst("^\\+$", "positive");
+		polarity = polarity.replaceFirst("\\-$", "negative");
+		polarity = polarity.replaceFirst("^\\=$", "neutral");
 		polarity = polarity.replaceFirst("^(?i)none$", "none");
 		
 		switch (this.ClassificationClasses.size())
@@ -1521,7 +1957,7 @@ public class Features {
 	 */
 	private int extractNgramsTAB(int length, String type, List<String> discardPos, boolean save)
 	{		
-        System.err.println("ngram extraction Tab: _"+length+"_"+type);
+        //System.err.println("ngram extraction Tab: _"+length+"_"+type);
         if (length == 0)
         {
         	return 0;
@@ -1536,7 +1972,7 @@ public class Features {
         	{
         		String ngram = "";
         		String[] fields = row.split("\t");
-        		String pos = "";
+        		String pos = "";        		
         		switch (type)
         		{
         		case "wf": ngram = fields[0]; break;
@@ -1581,12 +2017,19 @@ public class Features {
         		{
         			//standarize numeric values to NUMNUM lemma value
         			//ngram.replaceFirst("^[0-9]$", "NUMNUM");
-        			ngrams.add(normalize(ngram, params.getProperty("normalization", "none")));
+        			if (!type.equalsIgnoreCase("pos"))
+        			{
+        				ngrams.add(normalize(ngram, params.getProperty("normalization", "none")));
+        			}
+        			else
+        			{
+        				ngrams.add(ngram);
+        			}
         		}  
         		//certain punctuation marks are allowed as lemmas
         		else if ((lCurrent.length()<2) && (lCurrent.matches("[,;.?!]")))
         		{        		
-        			ngrams.add(normalize(ngram, params.getProperty("normalization", "none")));
+        			ngrams.add(lCurrent);
         		}        		
         		
         		// add ngrams to the feature list
@@ -1607,6 +2050,116 @@ public class Features {
         return 1;
 	}
 	
+	
+	/**
+	 *  Extract n-grams up to a certain length from an Conll tabulated format string.
+	 * 
+	 * @param String input : input tagged conll string 
+	 * @param int length : which 'n' use for 'n-grams' 
+	 * @param string type (wf|lemma|pos): what type of ngrams we want to extract.
+	 * @param boolean save : safe ngrams to file or not. 
+	 * @return int success: return 1 if the process ended correctly
+	 */
+	private int extractNgramsTABString(InputStream input, int length, String type, List<String> discardPos, boolean save)
+	{		
+		//System.err.println("ngram extraction Tab: _"+length+"_"+type);
+		if (length == 0)
+		{
+			return 0;
+		}
+
+		//System.err.println("ngram extraction, corpus sentences: "+corpus.getSentences().get(sent));        			
+		//String[] tokens = input.split("\n");
+		BufferedReader reader = new BufferedReader(new InputStreamReader(input));
+		LinkedList<String> ngrams = new LinkedList<String>();
+		String line;
+		try {
+			while ((line=reader.readLine()) != null)
+			{
+				String ngram = "";
+				String[] fields = line.split("\\s");
+				String pos = "";        		
+				switch (type)
+				{
+				case "wf": ngram = fields[0]; break;
+				case "lemma": 
+					if (fields.length>1){ngram = fields[1];} 
+					if (fields.length>2){pos=fields[2];} 
+					break;
+				case "pos": 
+					if (fields.length>2){
+						ngram = fields[2];
+						switch (ngram.length())
+						{
+						case 0: ngram = "-"; break;
+						case 1: ngram = ngram.substring(0,1); break;
+						default: ngram = ngram.substring(0,2); break;
+						}
+					}
+				}
+
+				//if the is a blank line we assume sentence has ended and we empty and re-initialize the n-gram list 
+				if (ngram.equals(""))
+				{
+					//empty n-gram list and add remaining n-grams to the feature list
+					while (!ngrams.isEmpty())
+					{
+						String ng = featureFromArray(ngrams, type);
+						addNgram (type, ng);        				
+						ngrams.removeFirst();
+					}        
+					continue;
+				}
+
+				if (ngrams.size() >= length)
+				{
+					ngrams.removeFirst();
+				}
+
+				//if no alphanumeric char is present discard the element as invalid ngram. Or if it has a PoS tag that
+				//should be discarded
+				String lCurrent = ngram;
+				if ((!discardPos.contains(pos)) && (!ngram.matches("^[^\\p{L}\\p{M}\\p{Nd}\\p{InEmoticons}]+$")) && (lCurrent.length()>1))
+				{
+					//standarize numeric values to NUMNUM lemma value
+					//ngram.replaceFirst("^[0-9]$", "NUMNUM");
+					if (!type.equalsIgnoreCase("pos"))
+					{
+						ngrams.add(normalize(ngram, params.getProperty("normalization", "none")));
+					}
+					else
+					{
+						ngrams.add(ngram);
+					}
+				}  
+				//certain punctuation marks are allowed as lemmas
+				else if ((lCurrent.length()<2) && (lCurrent.matches("[,;.?!]")))
+				{        		
+					ngrams.add(lCurrent);
+				}        		
+
+				// add ngrams to the feature list
+				for (int i=0;i<ngrams.size();i++)
+				{
+					String ng = featureFromArray(ngrams.subList(0, i+1), type);    				
+					addNgram (type, ng);        				
+				}
+			}
+		} catch (IOException e) {
+			System.err.println("EliXa::Features::extractNgramsTABString - WARNING: Error reading tagged file, "
+					+ "ngram extraction may be only partial\n");			
+		}
+		
+		//empty ngram list and add remaining ngrams to the feature list
+		while (!ngrams.isEmpty())
+		{
+			String ng = featureFromArray(ngrams, type);
+			addNgram (type, ng);        				
+			ngrams.removeFirst();
+		}        
+
+		return 1;
+	}
 		
 	
 	/**
@@ -1619,7 +2172,7 @@ public class Features {
 	 */
 	private int extractWfNgramsKAF(int length, KAFDocument kafDoc, boolean save)
 	{
-        System.err.println("ngram extraction: _"+length+"_");
+        //System.err.println("ngram extraction: _"+length+"_");
         if (length == 0)
         {
         	return 0;
@@ -1666,7 +2219,7 @@ public class Features {
 	 */
 	private int extractLemmaNgrams(int length, KAFDocument kafDoc, List<String> discardPos, boolean save)
 	{		
-        System.err.println("lemma ngram extraction: _"+length+"_");
+        //System.err.println("lemma ngram extraction: _"+length+"_");
         if (length == 0)
         {
         	return 0;
@@ -1727,8 +2280,7 @@ public class Features {
 	 */
 	public int extractPosNgrams(int length, KAFDocument kafDoc, List<String> discardPos, boolean save)
 	{
-		TreeSet<String> result = new TreeSet<String>();
-        System.err.println("POS ngram extraction: _"+length+"_");
+		//System.err.println("POS ngram extraction: _"+length+"_");
         if (length == 0)
         {
         	return 0;
@@ -1895,7 +2447,7 @@ public class Features {
 			String line;
 			while ((line = breader.readLine()) != null) 
 			{
-				if (line.matches("#") || line.matches("^\\s*$"))
+				if (line.startsWith("#") || line.matches("^\\s*$"))
 				{
 					continue;
 				}
@@ -1940,7 +2492,7 @@ public class Features {
 			String line;
 			while ((line = breader.readLine()) != null) 
 			{
-				if (line.matches("#") || line.matches("^\\s*$"))
+				if (line.startsWith("#") || line.matches("^\\s*$"))
 				{
 					continue;
 				}
@@ -2028,7 +2580,7 @@ public class Features {
 			while ((line = breader.readLine()) != null) 
 			{
 				// # starting lines are ignored, considered comments. Blank lines are ignored as well
-				if (line.matches("#") || line.matches("^\\s*$"))
+				if (line.startsWith("#") || line.matches("^\\s*$"))
 				{
 					continue;
 				}
@@ -2225,14 +2777,14 @@ public class Features {
 	private void checkPolarityLexicons(String wrd, double[] fVector, int tokNum, boolean ngrams)
 	{
 		// fill vector with general polarity scores
-		if ((polarLexiconGen1 != null) && (polarLexiconGen1.size()>0)) //(!polarLexiconGen.isEmpty()))
+		if ((polarLexiconGen != null) && (polarLexiconGen.size()>0)) //(!polarLexiconGen.isEmpty()))
 		{
-			if (polarLexiconGen1.isInLexicon(wrd))
+			if (polarLexiconGen.isInLexicon(wrd))
 			{
 				//fVector[getAttIndexes().get("polLexGen_posScore")]+=(polarLexiconGen.get(wrd).get("pos")/(double)tokNum);
 				//fVector[getAttIndexes().get("polLexGen_negScore")]+=(polarLexiconGen.get(wrd).get("neg")/(double)tokNum);
-				fVector[getAttIndexes().get("polLexGen_posScore")]+=(polarLexiconGen1.getPolarity(wrd).getPositiveScore()/(double)tokNum);
-				fVector[getAttIndexes().get("polLexGen_negScore")]+=(polarLexiconGen1.getPolarity(wrd).getNegativeScore()/(double)tokNum);
+				fVector[getAttIndexes().get("polLexGen_posScore")]+=(polarLexiconGen.getPolarity(wrd).getPositiveScore()/(double)tokNum);
+				fVector[getAttIndexes().get("polLexGen_negScore")]+=(polarLexiconGen.getPolarity(wrd).getNegativeScore()/(double)tokNum);
 
 				if (ngrams)
 				{
@@ -2242,14 +2794,14 @@ public class Features {
 		}
 		
 		// fill vector with domain polarity scores
-		if ((polarLexiconDom1 != null) && (polarLexiconDom1.size()>0)) //(!polarLexiconDom.isEmpty()))
+		if ((polarLexiconDom != null) && (polarLexiconDom.size()>0)) //(!polarLexiconDom.isEmpty()))
 		{
-			if (polarLexiconDom1.isInLexicon(wrd))
+			if (polarLexiconDom.isInLexicon(wrd))
 			{
 				//fVector[getAttIndexes().get("polLexDom_posScore")]+=(polarLexiconDom.get(wrd).get("pos")/(double)tokNum);
 				//fVector[getAttIndexes().get("polLexDom_negScore")]+=(polarLexiconDom.get(wrd).get("neg")/(double)tokNum);
-				fVector[getAttIndexes().get("polLexDom_posScore")]+=(polarLexiconDom1.getPolarity(wrd).getPositiveScore()/(double)tokNum);
-				fVector[getAttIndexes().get("polLexDom_negScore")]+=(polarLexiconDom1.getPolarity(wrd).getNegativeScore()/(double)tokNum);
+				fVector[getAttIndexes().get("polLexDom_posScore")]+=(polarLexiconDom.getPolarity(wrd).getPositiveScore()/(double)tokNum);
+				fVector[getAttIndexes().get("polLexDom_negScore")]+=(polarLexiconDom.getPolarity(wrd).getNegativeScore()/(double)tokNum);
 
 				if (ngrams)
 				{
@@ -2330,27 +2882,6 @@ public class Features {
 		this.corpus = corp;
 	}
 	
-	/**
-	 *  Normalize input String (urls -> URL) 
-	 * 
-	 * @param input : input string to normalize
-	 * @returns String
-	 */
-	@Deprecated
-	private String normalize (String input){			
-		
-		//URL normalization
-		UrlValidator defaultValidator = new UrlValidator(UrlValidator.ALLOW_ALL_SCHEMES);
-		
-		if (defaultValidator.isValid(input)) {
-	          return "URLURLURL"; // valid
-		}			
-		else
-		{
-			String result = input;
-			return result.replaceAll("^#", "");			
-		}
-	}
 	
 	/**
 	 *  Normalize input String (urls -> URL) 
@@ -2392,8 +2923,6 @@ public class Features {
 		else {
 			return input;
 		}
-	}
-	
-	
+	}	
 	
 }

@@ -359,7 +359,7 @@ public class Lexicon {
 				System.exit(formaterror);
 			}
 			
-			if (line.matches("#") || line.matches("^\\s*$"))
+			if (line.startsWith("#") || line.matches("^\\s*$"))
 			{
 				continue;
 			}
