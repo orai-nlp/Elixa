@@ -139,10 +139,21 @@ mvn clean install
 
 EliXa Funcionalities
 ==========================
-EliXa provides 4 main funcionalities:
+EliXa aims to provide 4 main funcionalities:
+
    - **ate**: Aspect term extraction (term category classification included.
    - **atp**: Aspect term polarity
    - **tgp**: Text global polarity.
+
+Currently the following command are available:
+
+    train-atp            ATP training CLI
+    eval-atp             ATP evaluation CLI
+    tag-atp              ATP Tagging CLI
+    slot2                Semeval 2015 slot2 (ATE) formatting CLI
+    tagSentences         Lemmatization and PoS tagging CLI
+    tag-naf              Predict polarity of a text in naf format 
+
 
 
 GENERATING JAVADOC
