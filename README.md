@@ -110,6 +110,8 @@ cp src/main/resources/lemmatizer-dicts/freeling/es-locutions.txt src/main/resour
 cp src/main/resources/es/es-locutions.txt src/main/resources/lemmatizer-dicts/freeling/es-locutions.txt
 ````
 
+Also, you will need the postagging models for ixa-pipes. This are not needed at compilation time as you specify the pos-model file in the configuration file. You can get the model from https://github.com/ixa-ehu/ixa-pipe-pos#models . Elixa uses the 1.4.6 models.
+
 
 4. Installing using maven
 ---------------------------
