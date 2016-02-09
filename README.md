@@ -84,7 +84,7 @@ You should see reference to the MAVEN version you have just installed plus the J
 --------------------------
 
 ````shell
-git clone https://bitbucket.org/elh-eus/elh-absa
+git clone https://github.com/Elhuyar/Elixa
 ````
 
 3. Dependencies - IXA-PIPES
@@ -112,8 +112,30 @@ cp src/main/resources/es/es-locutions.txt src/main/resources/lemmatizer-dicts/fr
 
 Also, you will need the postagging models for ixa-pipes. This are not needed at compilation time as you specify the pos-model file in the configuration file. You can get the model from https://github.com/ixa-ehu/ixa-pipe-pos#models . Elixa uses the 1.4.6 models.
 
+4. Resources
+---------------------------
 
-4. Installing using maven
+EliXa may use several language specific resources, such as polarity lexicons and other resources for text normalization. We currently provide such resources for 4 languages; Basque (eu), Spanish (es), English (en) and French (fr). 
+
+````shell
+cd elixa
+wget http://komunitatea.elhuyar.org/ig/files/2016/02/elixa-resources_0.8.tgz
+cd src/main/resources
+tar -xzvf elixa-resources_0.8.tgz
+````
+
+We also basic polarity classification model for the previous languages. Models have been trained over Twitter data in the context of the Behagunea (behagunea.dss2016.eu) project. Data is specific on the topic "San Sebastian 2016 Cultural Capital of Europe". 
+
+````shell
+cd elixa
+wget http://komunitatea.elhuyar.org/ig/files/2016/02/elixa-behagunea-models_0.8.tar.gz
+cd src/main/resources
+tar -xzvf elixa-behagunea-models_0.8.tar.gz
+````
+
+
+
+6. Installing using maven
 ---------------------------
 
 ````shell
