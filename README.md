@@ -196,6 +196,14 @@ mvn javadoc:jar
 Which will create a jar file core/target/elixa-1.0-javadoc.jar
 
 
+References
+===================
+
+If you use EliXa please cite the following paper:
+
+ - I. San Vicente, X. Saralegi, y R. Agerri, «EliXa: A modular and flexible ABSA platform», in Proceedings of the 9th International Workshop on Semantic Evaluation (SemEval 2015), Denver, Colorado, 2015, pp. 748-752.
+
+
 Contact information
 ===================
 
