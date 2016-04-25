@@ -127,7 +127,7 @@ tar -xzvf elixa-resources_0.8.tgz
 
 We also basic polarity classification model for the previous languages. Models have been trained over Twitter data in the context of the Behagunea (behagunea.dss2016.eu) project. Data is specific on the topic "San Sebastian 2016 Cultural Capital of Europe". 
 
-You can get the models from http://komunitatea.elhuyar.org/ig/files/2016/02/elixa-resources_0.8.tgz.
+You can get the models from http://komunitatea.elhuyar.org/ig/files/2016/02/elixa-behagunea-models_0.8.tar.gz.
 
 
 ````shell
@@ -150,7 +150,7 @@ mvn clean package
 This step will create a directory called target/ which contains various directories and files.
 Most importantly, there you will find the module executable:
 
-elixa-1.0.jar
+elixa-0.5.jar
 
 This executable contains every dependency the module needs, so it is completely portable as long
 as you have a JVM 1.7 installed.
@@ -175,12 +175,53 @@ EliXa aims to provide 4 main funcionalities:
 
 Currently the following command are available:
 
-    train-atp            ATP training CLI
-    eval-atp             ATP evaluation CLI
-    tag-atp              ATP Tagging CLI
+    train-atp|train-gp	 ATP training CLI
+    eval-atp|eval-gp	 ATP evaluation CLI
+    tag-atp|tag-gp   	 ATP Tagging CLI
     slot2                Semeval 2015 slot2 (ATE) formatting CLI
     tagSentences         Lemmatization and PoS tagging CLI
     tag-naf              Predict polarity of a text in naf format 
+
+Example uses
+---------------------------
+
+- train-atp|train-gp
+upcomming...
+- eval-atp|eval-gp
+upcomming...
+- tag-atp|tag-gp 
+upcomming...
+
+- tagSentences
+
+````shell
+java -jar target/elixa-0.5.jar tagSentences -d testTag -m absa-models/pos-models/en/en-maxent-100-c5-baseline-dict-penn.bin -l en < input_file.txt
+ ````
+    where:
+        "-d  TestTag" is the directory where tagged files will be stored with the following name: <id>_g.kaf
+        "-m path/to/pos-model.bin" is the path to the ixa-pipes-pos pos-model (version 1.4.6).
+        "-l en" language of the texts
+
+    For more info: 
+````shell
+ java -jar target/elixa-0.5.jar tagSentences -h
+````
+
+- tag-naf 
+
+````shell
+ java -jar target/elixa-0.5.jar tag-naf -l path/to/lexicon.lex < posTagged_input.naf > SentTagged_output.naf
+````
+
+    where: 
+	"-l path/to/lexicon.lex" is the path to the lexicon. Various lexicon formats are accepted:
+            
+     /*
+     *  "offset_synset<tab>(pos|neg|neu|int|wea|shi)<tab>lemma1, lemma2, lemma3, ...<tab>score<tab>..."   
+     *
+     *     First two columns are mandatory. Alternatively, first column can contain lemmas instead of offsets.
+     */
+
 
 
 
