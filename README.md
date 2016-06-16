@@ -212,7 +212,7 @@ java -jar target/elixa-0.5.jar tag-gp -h
 Train-gp is used to train polarity classification models using a previously tagged dataset. This process can be time consuming depending on the size of the corpus and the features we choose to use.
 
 ````shell
-java -jar target/elixa-1.0.jar train-atp -f tabNotagged -cn 3 -l es -p models/es-twt.cfg < ~/corpora/opinion-Datasets/Behagune/es-behagtwtpressUniq.tsv > rslt/es-modTreatment/es-twtBehag201602twtpressUniq-Bsline-Old-NonegFix.rslt
+java -jar target/elixa-1.0.jar train-gp -f tabNotagged -cn 3 -l es -p models/es-twt.cfg < ~/corpora/opinion-Datasets/Behagune/es-behagtwtpressUniq.tsv > rslt/es-modTreatment/es-twtBehag201602twtpressUniq-Bsline-Old-NonegFix.rslt
 ````		       
 
       explanation:
