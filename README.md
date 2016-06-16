@@ -175,9 +175,9 @@ EliXa aims to provide 4 main funcionalities:
 
 Currently the following command are available:
 
-    train-atp|train-gp	 ATP training CLI
-    eval-atp|eval-gp	 ATP evaluation CLI
-    tag-atp|tag-gp   	 ATP Tagging CLI
+    train-gp	 TGP training CLI
+    eval-gp	 TGP evaluation CLI
+    tag-gp   	 TGP Tagging CLI
     slot2                Semeval 2015 slot2 (ATE) formatting CLI
     tagSentences         Lemmatization and PoS tagging CLI
     tag-naf              Predict polarity of a text in naf format 
@@ -185,11 +185,13 @@ Currently the following command are available:
 Example uses
 ---------------------------
 
-- train-atp|train-gp
+- train-gp
 upcomming...
-- eval-atp|eval-gp
+- eval-gp
 upcomming...
-- tag-atp|tag-gp 
+- tag-gp 
+
+
 upcomming...
 
 - tagSentences
@@ -222,7 +224,23 @@ java -jar target/elixa-0.5.jar tagSentences -d testTag -m absa-models/pos-models
      *     First two columns are mandatory. Alternatively, first column can contain lemmas instead of offsets.
      */
 
+ The output of this command is the a NAF file, but with the prior polarity of the lemmas in the text annotated. e.g.:    
+````shell
+     - input NAF term element example: 
+     <term id="t28" type="open" lemma="irrelevance" pos="N" morphofeat="NN">
+      <span>
+        <target id="w28" />
+      </span>
+    </term>
 
+     - output would be:
+     <term id="t28" type="open" lemma="irrelevance" pos="N" morphofeat="NN">
+      <sentiment polarity="negative" />
+      <span>
+        <target id="w28" />
+      </span>
+    </term>
+````
 
 
 GENERATING JAVADOC
