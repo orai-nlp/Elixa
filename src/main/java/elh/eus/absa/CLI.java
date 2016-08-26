@@ -133,11 +133,11 @@ public class CLI {
 	public CLI() {
 		annotateParser = subParsers.addParser("tag-ate").help("Tagging CLI");
 		loadAnnotateParameters();
-		trainATPParser = subParsers.addParser("train-atp").help("ATP training CLI");
+		trainATPParser = subParsers.addParser("train-gp").help("ATP training CLI");
 		loadATPTrainingParameters();
-		evalATPParser = subParsers.addParser("eval-atp").help("ATP evaluation CLI");
+		evalATPParser = subParsers.addParser("eval-gp").help("ATP evaluation CLI");
 		loadATPevalParameters();
-		tagATPParser = subParsers.addParser("tag-atp").help("ATP Tagging CLI");
+		tagATPParser = subParsers.addParser("tag-gp").help("ATP Tagging CLI");
 		loadATPtagParameters();
 		trainATCParser = subParsers.addParser("train-atc").help("ATC training CLI (single classifier)");
 		loadATCTrainingParameters();
@@ -204,7 +204,7 @@ public class CLI {
 		} catch (ArgumentParserException e) {
 			argParser.handleError(e);
 			System.out.println("Run java -jar target/elixa-" + version
-					+ ".jar (train-atc|train-atp|eval-atp|tag-atp|slot2|tagSentences|tag-ate|train-gp|tag-gp|tag-naf) -help for details");
+					+ ".jar (train-atc|slot2|tagSentences|tag-ate|train-gp|tag-gp|tag-naf) -help for details");
 			System.exit(1);
 		}
 	}
