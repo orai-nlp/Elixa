@@ -726,7 +726,7 @@ public class Evaluator {
 		try {
 			KAFDocument doc = KAFDocument.createFromFile(new File(fname));
 			
-			KAFDocument.LinguisticProcessor newLp = doc.addLinguisticProcessor("terms", "qwn-ppv-polarity-tagger");
+			KAFDocument.LinguisticProcessor newLp = doc.addLinguisticProcessor("terms", "EliXa-polarity-tagger");
 			newLp.setVersion(lexName);			
 			newLp.setBeginTimestamp();
 			for (Term t : doc.getTerms())
@@ -777,10 +777,10 @@ public class Evaluator {
 			}									
 			
 		} catch (FileNotFoundException fe) {
-			System.err.println("AvgRatioEstimator: error when loading kaf file: "+fname);
+			System.err.println("ProcessKaf: error when loading kaf file: "+fname);
 			fe.printStackTrace();
 		} catch (IOException ioe) {
-			System.err.println("AvgRatioEstimator: error when loading kaf file: "+fname);
+			System.err.println("ProcessKaf: error when loading kaf file: "+fname);
 			ioe.printStackTrace();
 		}							
 		

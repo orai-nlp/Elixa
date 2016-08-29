@@ -214,9 +214,10 @@ public class CLI {
 
 		//String files = parsedArguments.getString("file");
 		String lexicon = parsedArguments.getString("lexicon");
-		String estimator = parsedArguments.getString("estimator");
-		String synset = parsedArguments.getString("synset");
+		//String estimator = parsedArguments.getString("estimator");
+		//String synset = parsedArguments.getString("synset");
 		float threshold = parsedArguments.getFloat("threshold");
+		boolean printPol = parsedArguments.getBoolean("estimatePolarity");
 		
 		//System.out.println("Polarity Predictor: ");
 		//BufferedReader freader = new BufferedReader(new FileReader(files));   		
@@ -227,9 +228,18 @@ public class CLI {
 				KAFDocument naf = KAFDocument.createFromStream(new InputStreamReader(inputStream));
 				
 				File lexFile = new File(lexicon);
-				Evaluator evalDoc = new Evaluator(lexFile, synset, threshold, estimator);
+				Evaluator evalDoc = new Evaluator(lexFile, "lemma", threshold, "avg");
 				Map<String, String> results = evalDoc.processKaf(naf, lexFile.getName());
 				naf.print();
+				if (printPol)
+				{
+					System.out.println("<Elixa-gp>"
+							+ "\t<sentiment-words>"+results.get("sentTermNum")+"</sentiment-words>"
+							+ "\t<polarity-score>"+results.get("avg")+"</polarity-score>"
+							+ "\t<polarity-threshold>"+results.get("thresh")+"</polarity-threshold>"
+							+ "\t<polarity>"+results.get("polarity")+"</polarity>"
+							+ "</Elixa-gp>");
+				}
 				//Map<String, Double> results = avg.processCorpus(corpus);
 				//System.out.println("eval avg done"+results.toString());
 				/*System.out.println("Prediction with avg done: \n"
@@ -268,33 +278,31 @@ public class CLI {
 		.required(true)
 		.help("Path to the polarity lexicon file.\n");
 
-		predictParser.addArgument("-s", "--synset")
-		.choices("lemma", "first","rank")
-		.required(false)
-		.setDefault("lemma")
-		.help(
-				"Default polarities are calculated over lemmas. With this option polarity of synsets is taken into account instead of words. Possible values: (lemma|first|rank). 'first' uses the sense with the highest confidence value for the lemma. 'rank' uses complete ranking of synsets.\n");
+		//predictParser.addArgument("-s", "--synset")
+		//.choices("lemma", "first","rank")
+		//.required(false)
+		//.setDefault("lemma")
+		//.help(
+		//		"Default polarities are calculated over lemmas. With this option polarity of synsets is taken into account instead of words. Possible values: (lemma|first|rank). 'first' uses the sense with the highest confidence value for the lemma. 'rank' uses complete ranking of synsets.\n");
 
-		predictParser.addArgument("-w", "--weights")
-		.action(Arguments.storeTrue())
-		.help(
-				"Use polarity weights instead of binary polarities (pos/neg). If the dictionary does not provide polarity scores the program defaults to binary polarities.\n");
+		//predictParser.addArgument("-w", "--weights")
+		//.action(Arguments.storeTrue())
+		//.help(
+		//		"Use polarity weights instead of binary polarities (pos/neg). If the dictionary does not provide polarity scores the program defaults to binary polarities.\n");
 
 		predictParser.addArgument("-t", "--threshold")
 		.required(false)
 		.setDefault((float)0)
 		.help(
-				"Threshold which limits positive and negative reviews. Float in the [-1,1] range. Default value is 0.\n");
+				"Threshold which limits positive and negative reviews. Float in the [-1,1] range. Default value is 0."
+				+ " It is used in combination with the --estimatPolarity\n");
 
-		predictParser.addArgument("-e", "--estimator")
-		.choices("avg", "moh")
-		.required(false)
-		.setDefault("avg")
+		predictParser.addArgument("-e", "--estimatePolarity")
+		.action(Arguments.storeTrue())
 		.help(
-				"scoring function used for computing the polarity [avg | moh]: \n"
-						+ "    - avg: average ratio of the polarity words in the text"
-						+ "    - moh: polarity classifier proposed in (Mohammad et al.,2009 - EMNLP). Originally used on the MPQA corpus\n");
-
+				"print a polarity estimation based on a simple average word polarity count (from words in the lexicon given).\n"
+				+ "WARNING: this polarity estimation is for test purposes. If you activate it an additional element will be "
+				+ "printed with the estimation statistics <Elixa-gp>, but the resulting naf won't be valid if that line is not deleted.\n");
 	}
 
 

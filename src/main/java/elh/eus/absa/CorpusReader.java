@@ -1116,7 +1116,7 @@ public class CorpusReader {
 		KAFDocument kafinst = new KAFDocument("","");
 		
 		String savename = sId.replace(':', '_');
-		String savePath = nafdir+File.separator+savename+".conll";			
+		String savePath = nafdir+File.separator+savename+".kaf";			
 		if (FileUtilsElh.checkFile(savePath))
 		{
 			System.err.println("CorpusReader::tagSentence : file already there:"+savePath);
