@@ -233,12 +233,12 @@ public class CLI {
 				naf.print();
 				if (printPol)
 				{
-					System.out.println("<Elixa-gp>"
-							+ "\t<sentiment-words>"+results.get("sentTermNum")+"</sentiment-words>"
-							+ "\t<polarity-score>"+results.get("avg")+"</polarity-score>"
-							+ "\t<polarity-threshold>"+results.get("thresh")+"</polarity-threshold>"
-							+ "\t<polarity>"+results.get("polarity")+"</polarity>"
-							+ "</Elixa-gp>");
+					System.out.println("<Elixa-gp>\n"
+							+ "\t<sentiment-words>"+results.get("sentTermNum")+"</sentiment-words>\n"
+							+ "\t<polarity-score>"+results.get("avg")+"</polarity-score>\n"
+							+ "\t<polarity-threshold>"+results.get("thresh")+"</polarity-threshold>\n"
+							+ "\t<polarity>"+results.get("polarity")+"</polarity>\n"
+							+ "</Elixa-gp>\n");
 				}
 				//Map<String, Double> results = avg.processCorpus(corpus);
 				//System.out.println("eval avg done"+results.toString());
