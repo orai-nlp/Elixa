@@ -391,8 +391,8 @@ public class Features {
         	if ((params.containsKey("lemmaNgrams") || (params.containsKey("pos") && !params.getProperty("pos").equalsIgnoreCase("0")))
         			&& (corpus.getLang().compareToIgnoreCase("eu")!=0))
         	{
-        		Properties posProp = NLPpipelineWrapper.setPostaggerProperties( params.getProperty("pos-model"),
-        				corpus.getLang(), "3", "bin", "false");					
+        		Properties posProp = NLPpipelineWrapper.setPostaggerProperties( params.getProperty("pos-model"), params.getProperty("lemma-model"),
+        				corpus.getLang(), "bin", "false");					
         		postagger = new eus.ixa.ixa.pipe.pos.Annotate(posProp);						
         	}
 
@@ -409,7 +409,7 @@ public class Features {
         		String nafPath = nafDir+File.separator+key.replace(':', '_');	
 
         		try {
-        			String taggedPath = NLPpipelineWrapper.tagSentence(currentSent, nafPath, corpus.getLang(),  params.getProperty("pos-model"), postagger);
+        			String taggedPath = NLPpipelineWrapper.tagSentence(currentSent, nafPath, corpus.getLang(),  params.getProperty("pos-model"), params.getProperty("lemma-model"), postagger);
         		} catch (JDOMException e) {
         			System.err.println("Features::createFeatureSet -> NAF error when tagging sentence");
         			e.printStackTrace();
@@ -746,8 +746,8 @@ public class Features {
 		//eus.ixa.ixa.pipe.pos.Annotate postagger = new eus.ixa.ixa.pipe.pos.Annotate(posProp);		
 		if (params.containsKey("lemmaNgrams"))
 		{
-			Properties posProp = NLPpipelineWrapper.setPostaggerProperties( params.getProperty("pos-model"),
-					corpus.getLang(), "3", "bin", "false");
+			Properties posProp = NLPpipelineWrapper.setPostaggerProperties( params.getProperty("pos-model"), params.getProperty("lemma-model"),
+					corpus.getLang(), "bin", "false");
 			
 			postagger = new eus.ixa.ixa.pipe.pos.Annotate(posProp);						
 		}
@@ -811,7 +811,7 @@ public class Features {
 					}
 					else
 					{
-						nafinst = NLPpipelineWrapper.ixaPipesTokPos(opNormalized, corpus.getLang(),  params.getProperty("pos-model"), postagger);
+						nafinst = NLPpipelineWrapper.ixaPipesTokPos(opNormalized, corpus.getLang(),  params.getProperty("pos-model"), params.getProperty("lemma-model"), postagger);
 						Files.createDirectories(Paths.get(nafDir));
 						nafinst.save(nafPath);						
 					}
@@ -1553,7 +1553,7 @@ public class Features {
 			try {
 				if (!FileUtilsElh.checkFile(nafPath+".kaf"))
 				{	
-        			nafPath = NLPpipelineWrapper.tagSentence(corpus.getOpinionSentence(oId), nafPath, corpus.getLang(),  params.getProperty("pos-model"), postagger);
+        			nafPath = NLPpipelineWrapper.tagSentence(corpus.getOpinionSentence(oId), nafPath, corpus.getLang(),  params.getProperty("pos-model"), params.getProperty("lemma-model"), postagger);
 				}
 				else
 				{

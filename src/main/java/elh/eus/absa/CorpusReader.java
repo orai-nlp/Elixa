@@ -1034,7 +1034,7 @@ public class CorpusReader {
 	 * @throws IOException
 	 * @throws JDOMException
 	 */
-	public void tagSentences(String nafdir, String posModel, boolean print) throws IOException, JDOMException
+	public void tagSentences(String nafdir, String posModel, String lemmatizerModel, boolean print) throws IOException, JDOMException
 	{				
 		KAFDocument kafinst = new KAFDocument("","");
 		for (String sId : getSentences().keySet())
@@ -1052,7 +1052,7 @@ public class CorpusReader {
 			}
 			else
 			{
-				kafinst = NLPpipelineWrapper.ixaPipesTokPos(getSentences().get(sId), lang, posModel);
+				kafinst = NLPpipelineWrapper.ixaPipesTokPos(getSentences().get(sId), lang, posModel, lemmatizerModel);
 				kafinst.save(kafPath);										
 			}
 			
@@ -1077,7 +1077,7 @@ public class CorpusReader {
 	 * @throws IOException
 	 * @throws JDOMException
 	 */
-	public String tagSentence(String sId, String nafdir, String posModel) throws IOException, JDOMException
+	public String tagSentence(String sId, String nafdir, String posModel, String lemmatizerModel) throws IOException, JDOMException
 	{				
 		KAFDocument kafinst = new KAFDocument("","");
 		
@@ -1094,7 +1094,7 @@ public class CorpusReader {
 		}
 		else
 		{
-			kafinst = NLPpipelineWrapper.ixaPipesTokPos(getSentences().get(sId), lang, posModel);
+			kafinst = NLPpipelineWrapper.ixaPipesTokPos(getSentences().get(sId), lang, posModel, lemmatizerModel);
 			kafinst.save(kafPath);										
 		}
 		return kafPath;
@@ -1111,7 +1111,7 @@ public class CorpusReader {
 	 * @throws IOException
 	 * @throws JDOMException
 	 */
-	public String tagSentenceTab(String sId, String nafdir, String posModel) throws IOException, JDOMException
+	public String tagSentenceTab(String sId, String nafdir, String posModel, String lemmatizerModel) throws IOException, JDOMException
 	{				
 		KAFDocument kafinst = new KAFDocument("","");
 		
@@ -1128,7 +1128,7 @@ public class CorpusReader {
 		}
 		else
 		{
-			String conll = NLPpipelineWrapper.ixaPipesTokPosConll(getSentences().get(sId), lang, posModel);
+			String conll = NLPpipelineWrapper.ixaPipesTokPosConll(getSentences().get(sId), lang, posModel, lemmatizerModel);
 			FileUtils.writeStringToFile(new File(savePath), conll);										
 		}
 		return savePath;
