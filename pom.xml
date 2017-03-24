@@ -21,7 +21,7 @@
 		<developer>
 			<id>ragerri</id>
 			<name>Rodrigo Agerri</name>
-			<email>rodrigo.agerri@ehu.es</email>
+			<email>rodrigo.agerri@ehu.eus</email>
                     </developer>
 	</developers>
 	<properties>
@@ -85,17 +85,17 @@
 		<dependency>
   			<groupId>eus.ixa</groupId>
   			<artifactId>ixa-pipe-tok</artifactId>
-  			<version>1.8.2</version>
+  			<version>1.8.5</version>
 		</dependency>		
 		<dependency>
   			<groupId>eus.ixa</groupId>
   			<artifactId>ixa-pipe-pos</artifactId>
-  			<version>1.4.4</version>
+  			<version>1.5.1</version>
 		</dependency>
 		<dependency>
 			<groupId>eus.ixa</groupId>
   			<artifactId>ixa-pipe-nerc</artifactId>
-  			<version>1.5.2</version>
+  			<version>1.6.1</version>
 		</dependency>
 	</dependencies>
 

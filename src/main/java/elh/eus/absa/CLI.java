@@ -310,6 +310,7 @@ public class CLI {
 	public final void tagSents(final InputStream inputStream)
 	{
 		String posModel = parsedArguments.getString("model");
+		String lemmaModel = parsedArguments.getString("lemmaModel");
 		String dir = parsedArguments.getString("dir");
 		String lang = parsedArguments.getString("language");
 		String format = parsedArguments.getString("format");
@@ -319,7 +320,7 @@ public class CLI {
 		try {
 			String tagDir= dir+File.separator+lang;
 			Files.createDirectories(Paths.get(tagDir));
-			reader.tagSentences(tagDir, posModel, print);
+			reader.tagSentences(tagDir, posModel, lemmaModel, print);
 		} catch (Exception e) {			
 			e.printStackTrace();
 		} 
@@ -524,6 +525,7 @@ public class CLI {
 			params.load(new FileInputStream(new File(paramFile)));
 
 			String posModelPath = params.getProperty("pos-model");
+			String lemmaModelPath = params.getProperty("lemma-model");
 			String kafDir = params.getProperty("kafDir");
 			
 			/* polarity lexicon. Domain specific polarity lexicon is given priority.
@@ -547,7 +549,7 @@ public class CLI {
 			for (String oId : reader.getOpinions().keySet())
 			{
 				// sentence posTagging
-				String taggedKaf = reader.tagSentenceTab(reader.getOpinion(oId).getsId(), kafDir, posModelPath);
+				String taggedKaf = reader.tagSentenceTab(reader.getOpinion(oId).getsId(), kafDir, posModelPath, lemmaModelPath);
 				//process the postagged sentence with the word count based polarity tagger
 				Map<String, String> results = evalDoc.polarityScoreTab(taggedKaf, lexFile.getName());				 
 				String lblStr = results.get("polarity");
@@ -696,6 +698,7 @@ public class CLI {
 			params.load(new FileInputStream(new File(paramFile)));
 
 			String posModelPath = params.getProperty("pos-model");
+			String lemmaModelPath = params.getProperty("lemma-model");
 			String kafDir = params.getProperty("kafDir");
 			
 			/* polarity lexicon. Domain specific polarity lexicon is given priority.
@@ -719,7 +722,7 @@ public class CLI {
 			for (String oId : reader.getOpinions().keySet())
 			{
 				// sentence posTagging
-				String taggedKaf = reader.tagSentenceTab(reader.getOpinion(oId).getsId(), kafDir, posModelPath);
+				String taggedKaf = reader.tagSentenceTab(reader.getOpinion(oId).getsId(), kafDir, posModelPath, lemmaModelPath);
 				//process the postagged sentence with the word count based polarity tagger
 				Map<String, String> results = evalDoc.polarityScoreTab(taggedKaf, lexFile.getName());				 
 				String lblStr = results.get("polarity");
