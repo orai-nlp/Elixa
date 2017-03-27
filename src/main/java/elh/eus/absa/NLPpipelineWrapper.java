@@ -24,6 +24,7 @@ import ixa.kaflib.KAFDocument;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -135,7 +136,7 @@ public final class NLPpipelineWrapper {
 	 * @throws IOException
 	 * @throws JDOMException
 	 */
-	public static KAFDocument ixaPipesPos(KAFDocument tokenizedKaf, String posModelPath, String lemmatizerModelPath) throws IOException, JDOMException
+	public static KAFDocument ixaPipesPos(KAFDocument tokenizedKaf, String posModelPath, String lemmaModelPath) throws IOException, JDOMException
 	{
 		
 		KAFDocument.LinguisticProcessor posLp = tokenizedKaf.addLinguisticProcessor(
@@ -146,18 +147,22 @@ public final class NLPpipelineWrapper {
 			System.err.println("NLPpipelineWrapper::ixaPipesPos() - provided pos model path is problematic, "
 					+ "probably pos tagging will end up badly...");
 		}
-		Properties posProp = setPostaggerProperties(posModelPath, lemmatizerModelPath,
-				tokenizedKaf.getLang(), "true", "bin");
+		if (! FileUtilsElh.checkFile(lemmaModelPath))
+		{
+			System.err.println("NLPpipelineWrapper::ixaPipesPos() - provided lemma model path is problematic, "
+					+ "probably pos tagging will end up badly...");
+		}
+		Properties posProp = setPostaggerProperties(posModelPath,lemmaModelPath,tokenizedKaf.getLang(), "false", "false");
 		//pos tagger call
 		eus.ixa.ixa.pipe.pos.Annotate postagger = new eus.ixa.ixa.pipe.pos.Annotate(posProp);
 		posLp.setBeginTimestamp();		
+		System.err.println(postagger.annotatePOSToCoNLL(tokenizedKaf));
 		postagger.annotatePOSToKAF(tokenizedKaf);
 		posLp.setEndTimestamp();
 
 		System.err.println("NLPpipelineWrapper::ixaPipesPos - pos tagging ready");
 
 		return tokenizedKaf;		
-
 	}
 
 	/**
@@ -171,7 +176,7 @@ public final class NLPpipelineWrapper {
 	 * @throws IOException
 	 * @throws JDOMException
 	 */
-	public static String ixaPipesPosConll(KAFDocument tokenizedKaf, String posModelPath, String lemmaModelPath) throws IOException, JDOMException
+	public static String ixaPipesPosConll(KAFDocument tokenizedKaf, String posModelPath,  String lemmaModelPath) throws IOException, JDOMException
 	{
 		
 		//KAFDocument.LinguisticProcessor posLp = tokenizedKaf.addLinguisticProcessor(
@@ -182,18 +187,17 @@ public final class NLPpipelineWrapper {
 			System.err.println("NLPpipelineWrapper::ixaPipesPos() - provided pos model path is problematic, "
 					+ "probably pos tagging will end up badly...");
 		}
-		Properties posProp = setPostaggerProperties(posModelPath, lemmaModelPath,
-				tokenizedKaf.getLang(), "bin", "true");
+		if (! FileUtilsElh.checkFile(lemmaModelPath))
+		{
+			System.err.println("NLPpipelineWrapper::ixaPipesPos() - provided lemma model path is problematic, "
+					+ "probably pos tagging will end up badly...");
+		}
+		Properties posProp = setPostaggerProperties(posModelPath,lemmaModelPath,tokenizedKaf.getLang(), "false", "false");
 		//pos tagger call
-		eus.ixa.ixa.pipe.pos.Annotate postagger = new eus.ixa.ixa.pipe.pos.Annotate(posProp);
-		//posLp.setBeginTimestamp();		
+		eus.ixa.ixa.pipe.pos.Annotate postagger = new eus.ixa.ixa.pipe.pos.Annotate(posProp);		
 		return (postagger.annotatePOSToCoNLL(tokenizedKaf));
-		//posLp.setEndTimestamp();
-
+		
 		//System.err.println("NLPpipelineWrapper::ixaPipesPos - pos tagging ready");
-
-		//return tokenizedKaf;		
-
 	}
 	
 	/**
@@ -207,7 +211,7 @@ public final class NLPpipelineWrapper {
 	 * @throws IOException
 	 * @throws JDOMException
 	 */
-	public static KAFDocument ixaPipesPos(KAFDocument tokenizedKaf, String posModelPath, String lemmaModelPath, eus.ixa.ixa.pipe.pos.Annotate postagger) throws IOException, JDOMException
+	public static KAFDocument ixaPipesPos(KAFDocument tokenizedKaf, String posModelPath, eus.ixa.ixa.pipe.pos.Annotate postagger) throws IOException, JDOMException
 	{
 		
 		KAFDocument.LinguisticProcessor posLp = tokenizedKaf.addLinguisticProcessor(
@@ -323,9 +327,9 @@ public final class NLPpipelineWrapper {
 	 * @throws IOException
 	 * @throws JDOMException
 	 */
-	public static KAFDocument ixaPipesTokPos(String text, String lang, String posModelPath, String lemmaModelPath, eus.ixa.ixa.pipe.pos.Annotate postagger) throws IOException, JDOMException
+	public static KAFDocument ixaPipesTokPos(String text, String lang, String posModelPath, eus.ixa.ixa.pipe.pos.Annotate postagger) throws IOException, JDOMException
 	{
-		return ixaPipesPos(ixaPipesTok(text, lang), posModelPath, lemmaModelPath, postagger);
+		return ixaPipesPos(ixaPipesTok(text, lang), posModelPath, postagger);
 	}	
 	
 	/**
@@ -353,25 +357,28 @@ public final class NLPpipelineWrapper {
 	 * Set properties for the Ixa-pipe-pos tagger module
 	 * 
 	 * @param model
+	 * @param lemmaModel
 	 * @param language (ISO-639 code) 
-	 * @param beamSize
-	 * @param lemmatize
 	 * @param multiwords
+	 * @param dictag
 	 * 
 	 * @return Properties props
 	 * 
 	 */
-	public static Properties setPostaggerProperties(String model, String lemmatizerModel, String language, String multiwords, String dictTag) {
+	public static Properties setPostaggerProperties(String model, String lemmaModel, String language, String multiwords, String dictag) {
 		Properties props = new Properties();
 		props.setProperty("model", model);
-		props.setProperty("lemmatizerModel", lemmatizerModel);
+		props.setProperty("lemmatizerModel", lemmaModel);
 		props.setProperty("language", language);
+		//props.setProperty("beamSize", beamSize); @deprecated 
 		//this is a work around for ixa-pipes, because it only allows multiword matching for es and gl.
 		if (!language.matches("(gl|es)")){
 			multiwords = "false";
 		}			
 		props.setProperty("multiwords", multiwords);
-		props.setProperty("dictTag", dictTag);
+		
+		props.setProperty("dictag", dictag);
+		
 		return props;
 	}
 	
@@ -399,7 +406,8 @@ public final class NLPpipelineWrapper {
 		try {
 			File temp = new File(fname);
 			//System.err.println("eustaggerCall: created temp file: "+temp.getAbsolutePath());
-			BufferedWriter bw = new BufferedWriter(new FileWriter(temp));
+			BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(
+					new FileOutputStream(temp), "UTF8"));
 			bw.write(string+"\n");
 			bw.close();
 						
@@ -466,13 +474,13 @@ public final class NLPpipelineWrapper {
 			return savePathNoExt+".kaf";
 		}
 		// if language is basque 'posModel' argument is used to pass the path to the basque morphological analyzer eustagger 
-		/*else if (lang.compareToIgnoreCase("eu")==0)
+		else if (lang.compareToIgnoreCase("eu")==0)
 		{
 			int ok =eustaggerCall(posModel, input, savePathNoExt);
-		}*/
+		}
 		else
 		{
-			kafinst = ixaPipesTokPos(input, lang, posModel, lemmaModel, postagger);
+			kafinst = ixaPipesTokPos(input, lang, posModel, lemmaModel);
 			kafinst.save(savePathNoExt+".kaf");										
 		}
 		return savePathNoExt+".kaf";

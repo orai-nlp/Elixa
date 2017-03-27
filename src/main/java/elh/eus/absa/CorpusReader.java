@@ -822,8 +822,8 @@ public class CorpusReader {
 			
 			if (fields.length < 3)
 			{
-				System.err.println("CorpusReader::readIreomSentencesToTag : bad sentence format, format must be:\n"
-						+ "\t\"id<tab>polarity<tab>text[<tab>addittionalfields]\"\t"
+				System.err.println("CorpusReader::readTabNotaggedCorpus : bad sentence format, format must be:\n"
+						+ "\t\"id<tab>polarity<tab>text[<tab>addittionalfields]\"\t("+fields[0]+") "
 						+ "sentence won't be annotated.");
 				continue;
 			}
@@ -1034,33 +1034,34 @@ public class CorpusReader {
 	 * @throws IOException
 	 * @throws JDOMException
 	 */
-	public void tagSentences(String nafdir, String posModel, String lemmatizerModel, boolean print) throws IOException, JDOMException
+	public void tagSentences(String nafdir, String posModel, String lemmaModel, boolean print) throws IOException, JDOMException
 	{				
-		KAFDocument kafinst = new KAFDocument("","");
+		KAFDocument nafinst = new KAFDocument("","");
 		for (String sId : getSentences().keySet())
 		{
-			String kafname = sId.replace(':', '_');
-			String kafPath = nafdir+File.separator+kafname+".kaf";			
-			if (FileUtilsElh.checkFile(kafPath))
+			String nafname = sId.replace(':', '_');
+			String nafPath = nafdir+File.separator+nafname+".kaf";			
+			if (FileUtilsElh.checkFile(nafPath))
 			{
-				System.err.println("CorpusReader::tagSentence : file already there:"+kafPath);
+				System.err.println("CorpusReader::tagSentence : file already there:"+nafPath);
 			}
 			// if language is basque 'posModel' argument is used to pass the path to the basque morphological analyzer eustagger 
 			else if (lang.compareToIgnoreCase("eu")==0)
 			{
-				int ok =NLPpipelineWrapper.eustaggerCall(posModel, getSentences().get(sId), nafdir+File.separator+kafname);				
+				int ok =NLPpipelineWrapper.eustaggerCall(posModel, getSentences().get(sId), nafdir+File.separator+nafname);				
 			}
 			else
 			{
-				kafinst = NLPpipelineWrapper.ixaPipesTokPos(getSentences().get(sId), lang, posModel, lemmatizerModel);
-				kafinst.save(kafPath);										
+				nafinst = NLPpipelineWrapper.ixaPipesTokPos(getSentences().get(sId), lang, posModel, lemmaModel);
+				System.err.println(nafinst.toString());
+				nafinst.save(nafPath);										
 			}
 			
 			if (print)
 			{
 				String toprint = "<doc id=\""+sId+"\" polarity=\""+getSentenceOpinions(sId).get(0).getPolarity()+"\">";
 				System.out.println(toprint);
-				System.out.println(IOUtils.toString(new FileInputStream(new File(kafPath))));
+				System.out.println(IOUtils.toString(new FileInputStream(new File(nafPath))));
 				System.out.println("</doc>");
 			}
 		}		
