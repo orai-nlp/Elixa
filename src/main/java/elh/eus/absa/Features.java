@@ -20,6 +20,7 @@ This file is part of EliXa.
 package elh.eus.absa;
 
 import elh.eus.absa.CorpusReader;
+import elh.eus.absa.Lexicon.Polarity;
 import ixa.kaflib.KAFDocument;
 import ixa.kaflib.Term;
 import ixa.kaflib.WF;
@@ -38,6 +39,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
@@ -50,6 +52,8 @@ import weka.core.SparseInstance;
 import weka.core.converters.ArffSaver;
 
 import java.util.Properties;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
@@ -87,12 +91,19 @@ public class Features {
 	//structure to store POS ngram attributes
 	private HashMap<String, Integer> POSNgrams = new HashMap<String,Integer>(); 
 	
+	//structure to store classification classes
 	private List<String> ClassificationClasses = Arrays.asList("dummy","positive","negative","neutral");  
+
+	//structure to store lemma ngram attributes
+	private HashSet<String> stopwords = new HashSet<String>(); 
 
 	//structure to control general polarity lexicon
 	private Lexicon polarLexiconGen;
 	//structure to control domain polarity lexicon
 	private Lexicon polarLexiconDom;
+	
+	private int modifierWindow = 1;
+	
 	
 	// PoS tagger object. Defined here for optimizing posTagger resource loading times
 	private eus.ixa.ixa.pipe.pos.Annotate postagger;
@@ -102,6 +113,15 @@ public class Features {
 	
 	// feature number
 	private int featNum;
+	
+	//Some pattern used during feature extraction
+	private Pattern ngramPrefix = Pattern.compile("(WF|LEM|POS)_(.*)$"); 	
+	private Pattern modifierPrefix = Pattern.compile("(SHI|INT|WEA)_(.*)$"); 
+	private Pattern ngPattern = Pattern.compile("^((WF|LEM|POS)_)?((SHI|INT|WEA)_)*(.*)$");
+	
+	//pattern to match eustagger executable
+	private Pattern eustagger = Pattern.compile("(eustagger|euslem|ixa-pipe-pos-eu)",Pattern.CASE_INSENSITIVE);
+
 	
 	/**
 	 *  Constructor
@@ -143,6 +163,13 @@ public class Features {
 				{
 					 MicrotxtNormalizer =  new MicroTextNormalizer(corpus.getLang());
 				}
+				
+				//stopword list to rule out function words or too frequent works. 
+				if (params.containsKey("stopwords"))
+				{
+					setStopwords(this.getClass().getClassLoader().getResourceAsStream(corpus.getLang()+"/stopwords.txt"));			
+				}
+
 				//System.err.println("Features: initiate feature extraction from corpus");	
 				createFeatureSet();
 			} catch (IOException e) {
@@ -184,6 +211,12 @@ public class Features {
 				else if (norm.compareTo("none")!=0)
 				{
 					MicrotxtNormalizer = new MicroTextNormalizer(corpus.getLang());
+				}
+				
+				//stopword list to rule out function words or too frequent works.
+				if (params.containsKey("stopwords"))
+				{
+					setStopwords(this.getClass().getClassLoader().getResourceAsStream(corpus.getLang()+"/stopWords.txt"));			
 				}
 				
 				if (FileUtilsElh.checkFile(modelPath))
@@ -303,10 +336,10 @@ public class Features {
 			if (header.attribute("polLexGen_posScore")!=null)
 			{
 				this.polarLexiconGen = new Lexicon(new File(params.getProperty("polarLexiconGeneral")),"lemma");
-				System.err.println("Features : createFeatureSet() - General polarity lexicon loaded -> "
+				System.err.println("Features : createFeatureSetFromModel() - General polarity lexicon loaded -> "
 						+params.getProperty("polarLexiconGeneral")
 						+" ("+this.polarLexiconGen.size()+" entries)");
-				System.out.println("Features : createFeatureSet() - General polarity lexicon loaded -> "
+				System.out.println("Features : createFeatureSetFromModel() - General polarity lexicon loaded -> "
 						+params.getProperty("polarLexiconGeneral")
 						+" ("+this.polarLexiconGen.size()+" entries)");
 			}
@@ -316,10 +349,10 @@ public class Features {
 			{
 				//this.polarLexiconDom = loadPolarityLexiconFromFile(params.getProperty("polarLexiconDomain"), "polLexDom_");
 				this.polarLexiconDom = new Lexicon(new File(params.getProperty("polarLexiconDomain")),"lemma");
-				System.err.println("Features : createFeatureSet() - Domain polarity lexicon loaded -> "
+				System.err.println("Features : createFeatureSetFromModel() - Domain polarity lexicon loaded -> "
 						+params.getProperty("polarLexiconDomain")
 						+" ("+this.polarLexiconDom.size()+" entries)");
-				System.out.println("Features : createFeatureSet() - Domain polarity lexicon loaded -> "
+				System.out.println("Features : createFeatureSetFromModel() - Domain polarity lexicon loaded -> "
 						+params.getProperty("polarLexiconDomain")
 						+" ("+this.polarLexiconDom.size()+" entries)");	
 			}
@@ -340,7 +373,7 @@ public class Features {
 			
 		} catch (Exception e)
 		{
-			System.err.println("Features::createFeatureSetFromFile -> error when loading model header");
+			System.err.println("Features::createFeatureSetFromModel -> error when loading model header");
 			e.printStackTrace();
 		}			
 		
@@ -388,15 +421,18 @@ public class Features {
 		//Corpus tagging, if the corpus is not in conll tabulated format
         if (corpus.getFormat().equalsIgnoreCase("tabNotagged") || !corpus.getFormat().startsWith("tab"))
         {
-        	if ((params.containsKey("lemmaNgrams") || (params.containsKey("pos") && !params.getProperty("pos").equalsIgnoreCase("0")))
-        			&& (corpus.getLang().compareToIgnoreCase("eu")!=0))
+        	if ((params.containsKey("lemmaNgrams") || (params.containsKey("pos") && !params.getProperty("pos").equalsIgnoreCase("0"))))
         	{
-        		Properties posProp = NLPpipelineWrapper.setPostaggerProperties( params.getProperty("pos-model"),
-        				corpus.getLang(), "3", "bin", "false");					
-        		postagger = new eus.ixa.ixa.pipe.pos.Annotate(posProp);						
+        		if (!eustagger.matcher(params.getProperty("pos-model")).find())
+        		{
+        			Properties posProp = NLPpipelineWrapper.setPostaggerProperties( params.getProperty("pos-model"), params.getProperty("lemma-model"),
+        					corpus.getLang(), "false", "false");					
+        			postagger = new eus.ixa.ixa.pipe.pos.Annotate(posProp);
+        		}
         	}
 
         	
+        	long startTime = System.currentTimeMillis();
         	for (String key : corpSentenceIds)
         	{
         		String currentSent = corpus.getSentence(key);		
@@ -409,13 +445,16 @@ public class Features {
         		String nafPath = nafDir+File.separator+key.replace(':', '_');	
 
         		try {
-        			String taggedPath = NLPpipelineWrapper.tagSentence(currentSent, nafPath, corpus.getLang(),  params.getProperty("pos-model"), postagger);
+        			String taggedPath = NLPpipelineWrapper.tagSentence(currentSent, nafPath, corpus.getLang(),  params.getProperty("pos-model"), params.getProperty("lemma-model"), postagger);
         		} catch (JDOMException e) {
         			System.err.println("Features::createFeatureSet -> NAF error when tagging sentence");
         			e.printStackTrace();
         		}
         		//System.err.println("Features::createFeatureSet -> corpus normalization step done");						
         	}
+        	long endTime = System.currentTimeMillis();
+        	System.err.println("Features::createFeatureSet() - sentence normalization and tagging done: "
+        			+(double)(endTime-startTime)/1000 + " seconds");
         }
 		// word form ngram features
 		if (params.containsKey("wfngrams"))
@@ -468,8 +507,8 @@ public class Features {
 				addNumericFeatureSet("", wfNgrams, wfMinFreq);
 			}
 
-			System.err.println("Features : createFeatureSet() - unigram features -> "+(this.featNum-featPos));
-			System.out.println("Features : createFeatureSet() - unigram features -> "+(this.featNum-featPos));
+			System.err.println("Features : createFeatureSet() - word form ngram features -> "+(this.featNum-featPos));
+			System.out.println("Features : createFeatureSet() - word form ngram features -> "+(this.featNum-featPos));
 		}
 		
 		// lemma ngram features
@@ -650,6 +689,13 @@ public class Features {
 				for (String s : this.polarLexiconGen.getEntrySet())
 				{
 					addNumericFeature("polgen_"+s);
+					if (params.getProperty("modifierTreament", "0").equals("2"))
+					{
+						addNumericFeature("polgen_SHI_"+s);
+						addNumericFeature("polgen_INT_"+s);
+						addNumericFeature("polgen_WEA_"+s);;
+					}
+					
 				}
 				System.err.println("Features : createFeatureSet() - General polarity lexicon lemmas loaded. -> "+this.polarLexiconGen.size());
 				System.out.println("Features : createFeatureSet() - General polarity lexicon lemmas loaded. -> "+this.polarLexiconGen.size());		
@@ -678,6 +724,12 @@ public class Features {
 				for (String s : this.polarLexiconDom.getEntrySet())
 				{
 					addNumericFeature("poldom_"+s);
+					if (params.getProperty("modifierTreament", "0").equals("2"))
+					{
+						addNumericFeature("poldom_SHI_"+s);
+						addNumericFeature("poldom_INT_"+s);
+						addNumericFeature("poldom_WEA_"+s);;
+					}
 				}
 				System.err.println("Features : createFeatureSet() - Domain polarity lexicon lemmas loaded -> "+this.polarLexiconDom.size());
 				System.out.println("Features : createFeatureSet() - Domain polarity lexicon lemmas loaded -> "+this.polarLexiconDom.size());		
@@ -746,8 +798,8 @@ public class Features {
 		//eus.ixa.ixa.pipe.pos.Annotate postagger = new eus.ixa.ixa.pipe.pos.Annotate(posProp);		
 		if (params.containsKey("lemmaNgrams"))
 		{
-			Properties posProp = NLPpipelineWrapper.setPostaggerProperties( params.getProperty("pos-model"),
-					corpus.getLang(), "3", "bin", "false");
+			Properties posProp = NLPpipelineWrapper.setPostaggerProperties( params.getProperty("pos-model"), params.getProperty("lemma-model"),
+					corpus.getLang(), "false", "false");
 			
 			postagger = new eus.ixa.ixa.pipe.pos.Annotate(posProp);						
 		}
@@ -807,13 +859,19 @@ public class Features {
 				{						
 					if (FileUtilsElh.checkFile(nafPath))
 					{
-						nafinst = KAFDocument.createFromFile(new File(nafPath));						
+						// can not use directly KAFDocument.createFromFile because a kaflib bug (non valid xml chars are inserted in comments.)
+					    //File nafFile = new File(nafPath);
+					    //String cleanKAF = FileUtilsElh.stripNonValidXMLCharacters(FileUtils.readFileToString(nafFile));
+					    //FileUtils.deleteQuietly(nafFile);
+					    //FileUtils.writeStringToFile(nafFile,cleanKAF);
+					    nafinst = KAFDocument.createFromFile(new File(nafPath));						
 					}
 					else
 					{
-						nafinst = NLPpipelineWrapper.ixaPipesTokPos(opNormalized, corpus.getLang(),  params.getProperty("pos-model"), postagger);
 						Files.createDirectories(Paths.get(nafDir));
-						nafinst.save(nafPath);						
+						nafinst = NLPpipelineWrapper.ixaPipesTokPos(opNormalized, corpus.getLang(),  params.getProperty("pos-model"), postagger);												
+						nafinst.save(nafPath);
+						
 					}
 					tokNum = nafinst.getWFs().size();
 					//System.err.println("Features::loadInstances - postagging opinion sentence ("+oId+") - "+corpus.getOpinionSentence(oId));
@@ -822,14 +880,19 @@ public class Features {
 				{
 					if (FileUtilsElh.checkFile(nafPath))
 					{
-						nafinst = KAFDocument.createFromFile(new File(nafPath));
+						// can not use directly KAFDocument.createFromFile because a kaflib bug (non valid xml chars are inserted in comments.)												
+						//File nafFile = new File(nafPath);
+					    //String cleanKAF = FileUtilsElh.stripNonValidXMLCharacters(FileUtils.readFileToString(nafFile));
+					    //FileUtils.deleteQuietly(nafFile);
+					    //FileUtils.writeStringToFile(nafFile,cleanKAF);
+					    nafinst = KAFDocument.createFromFile(new File(nafPath));
 					}
 					else
 					{
 						nafinst = NLPpipelineWrapper.ixaPipesTok(opNormalized,corpus.getLang());						
 					}
 					tokNum = nafinst.getWFs().size();
-					//System.err.println("Features::loadInstances - tokenizing opinion sentence ("+oId+") - "+corpus.getOpinionSentence(oId));
+					System.err.println("Features::loadInstances - tokenizing opinion sentence ("+oId+") - "+corpus.getOpinionSentence(oId));
 
 				}
 			} catch (IOException | JDOMException e) {
@@ -1553,7 +1616,7 @@ public class Features {
 			try {
 				if (!FileUtilsElh.checkFile(nafPath+".kaf"))
 				{	
-        			nafPath = NLPpipelineWrapper.tagSentence(corpus.getOpinionSentence(oId), nafPath, corpus.getLang(),  params.getProperty("pos-model"), postagger);
+        			nafPath = NLPpipelineWrapper.tagSentence(corpus.getOpinionSentence(oId), nafPath, corpus.getLang(),  params.getProperty("pos-model"), params.getProperty("lemma-model"), postagger);
 				}
 				else
 				{
@@ -1963,6 +2026,9 @@ public class Features {
         	return 0;
         }
         
+        //if modifier full treatment option is on generate corresponding features. 
+		int mod = Integer.valueOf(params.getProperty("modifierTreament", "0"));
+        
         for (String sent : corpus.getSentences().keySet())
         {
             //System.err.println("ngram extraction, corpus sentences: "+corpus.getSentences().get(sent));        	
@@ -2000,6 +2066,15 @@ public class Features {
         			{
         				String ng = featureFromArray(ngrams, type);
         				addNgram (type, ng);        				
+        				if (mod>1)
+        				{
+        					String not_ng = ngramPrefix.matcher(ng).replaceAll("$1_SHI_$2");
+        					String int_ng = ngramPrefix.matcher(ng).replaceAll("$1_INT_$2");
+        					String weak_ng = ngramPrefix.matcher(ng).replaceAll("$1_WEA_$2");
+            				addNgram (type, not_ng);
+            				addNgram (type, int_ng);
+            				addNgram (type, weak_ng);
+        				}
         				ngrams.removeFirst();
         			}        
         			continue;
@@ -2036,14 +2111,32 @@ public class Features {
         		for (int i=0;i<ngrams.size();i++)
         		{
         			String ng = featureFromArray(ngrams.subList(0, i+1), type);    				
-    				addNgram (type, ng);        				
+    				addNgram (type, ng); 
+    				if (mod>1)
+    				{
+    					String not_ng = ngramPrefix.matcher(ng).replaceAll("$1_SHI_$2");
+    					String int_ng = ngramPrefix.matcher(ng).replaceAll("$1_INT_$2");
+    					String weak_ng = ngramPrefix.matcher(ng).replaceAll("$1_WEA_$2");
+        				addNgram (type, not_ng);
+        				addNgram (type, int_ng);
+        				addNgram (type, weak_ng);
+    				}
         		}
         	}
         	//empty ngram list and add remaining ngrams to the feature list
         	while (!ngrams.isEmpty())
         	{
         		String ng = featureFromArray(ngrams, type);
-				addNgram (type, ng);        				
+				addNgram (type, ng); 
+				if (mod>1)
+				{
+					String not_ng = ngramPrefix.matcher(ng).replaceAll("$1_SHI_$2");
+					String int_ng = ngramPrefix.matcher(ng).replaceAll("$1_INT_$2");
+					String weak_ng = ngramPrefix.matcher(ng).replaceAll("$1_WEA_$2");
+    				addNgram (type, not_ng);
+    				addNgram (type, int_ng);
+    				addNgram (type, weak_ng);
+				}
 				ngrams.removeFirst();
         	}        
         }
@@ -2067,6 +2160,9 @@ public class Features {
 		{
 			return 0;
 		}
+
+        //if modifier full treatment option is on generate corresponding features. 
+		int mod = Integer.valueOf(params.getProperty("modifierTreament", "0"));
 
 		//System.err.println("ngram extraction, corpus sentences: "+corpus.getSentences().get(sent));        			
 		//String[] tokens = input.split("\n");
@@ -2105,7 +2201,16 @@ public class Features {
 					while (!ngrams.isEmpty())
 					{
 						String ng = featureFromArray(ngrams, type);
-						addNgram (type, ng);        				
+						addNgram (type, ng);  
+						if (mod>1)
+        				{
+        					String not_ng = ngramPrefix.matcher(ng).replaceAll("$1_SHI_$2");
+        					String int_ng = ngramPrefix.matcher(ng).replaceAll("$1_INT_$2");
+        					String weak_ng = ngramPrefix.matcher(ng).replaceAll("$1_WEA_$2");
+            				addNgram (type, not_ng);
+            				addNgram (type, int_ng);
+            				addNgram (type, weak_ng);
+        				}
 						ngrams.removeFirst();
 					}        
 					continue;
@@ -2142,7 +2247,16 @@ public class Features {
 				for (int i=0;i<ngrams.size();i++)
 				{
 					String ng = featureFromArray(ngrams.subList(0, i+1), type);    				
-					addNgram (type, ng);        				
+					addNgram (type, ng); 
+					if (mod>1)
+    				{
+    					String not_ng = ngramPrefix.matcher(ng).replaceAll("$1_SHI_$2");
+    					String int_ng = ngramPrefix.matcher(ng).replaceAll("$1_INT_$2");
+    					String weak_ng = ngramPrefix.matcher(ng).replaceAll("$1_WEA_$2");
+        				addNgram (type, not_ng);
+        				addNgram (type, int_ng);
+        				addNgram (type, weak_ng);
+    				}
 				}
 			}
 		} catch (IOException e) {
@@ -2154,7 +2268,16 @@ public class Features {
 		while (!ngrams.isEmpty())
 		{
 			String ng = featureFromArray(ngrams, type);
-			addNgram (type, ng);        				
+			addNgram (type, ng); 
+			if (mod>1)
+			{
+				String not_ng = ngramPrefix.matcher(ng).replaceAll("$1_SHI_$2");
+				String int_ng = ngramPrefix.matcher(ng).replaceAll("$1_INT_$2");
+				String weak_ng = ngramPrefix.matcher(ng).replaceAll("$1_WEA_$2");
+				addNgram (type, not_ng);
+				addNgram (type, int_ng);
+				addNgram (type, weak_ng);
+			}
 			ngrams.removeFirst();
 		}        
 
@@ -2178,6 +2301,10 @@ public class Features {
         	return 0;
         }
 
+        //if modifier full treatment option is on generate corresponding features. 
+		int mod = Integer.valueOf(params.getProperty("modifierTreament", "0"));
+
+        
         for (List<WF> sent : kafDoc.getSentences()) 
         { 
         	LinkedList<String> ngrams = new LinkedList<String>();
@@ -2195,6 +2322,15 @@ public class Features {
         		{
         			String ng = featureFromArray(ngrams.subList(0, i+1), "wf");
         			addNgram ("wf", ng);  
+        			if (mod>1)
+        			{
+        				String not_ng = ngramPrefix.matcher(ng).replaceAll("$1_SHI_$2");
+        				String int_ng = ngramPrefix.matcher(ng).replaceAll("$1_INT_$2");
+        				String weak_ng = ngramPrefix.matcher(ng).replaceAll("$1_WEA_$2");
+        				addNgram ("wf", not_ng);
+        				addNgram ("wf", int_ng);
+        				addNgram ("wf", weak_ng);
+        			}
         		}
         	}
         	//empty ngram list and add remaining ngrams to the feature list
@@ -2202,6 +2338,15 @@ public class Features {
         	{
         		String ng = featureFromArray(ngrams, "wf");
         		addNgram ("wf", ng);  
+        		if (mod>1)
+    			{
+    				String not_ng = ngramPrefix.matcher(ng).replaceAll("$1_SHI_$2");
+    				String int_ng = ngramPrefix.matcher(ng).replaceAll("$1_INT_$2");
+    				String weak_ng = ngramPrefix.matcher(ng).replaceAll("$1_WEA_$2");
+    				addNgram ("wf", not_ng);
+    				addNgram ("wf", int_ng);
+    				addNgram ("wf", weak_ng);
+    			}
         		ngrams.removeFirst();
         	}
         }        
@@ -2225,6 +2370,10 @@ public class Features {
         	return 0;
         }
 
+        //if modifier full treatment option is on generate corresponding features. 
+        int mod = Integer.valueOf(params.getProperty("modifierTreament", "0"));
+
+        
         int sentNum = kafDoc.getSentences().size();
         for (int s=0; s<sentNum;s++) 
         { 
@@ -2255,6 +2404,15 @@ public class Features {
         		{        			
         			String ng = featureFromArray(ngrams.subList(0, i+1), "lemma");
         			addNgram ("lemma", ng);  
+        			if (mod>1)
+        			{
+        				String not_ng = ngramPrefix.matcher(ng).replaceAll("$1_SHI_$2");
+        				String int_ng = ngramPrefix.matcher(ng).replaceAll("$1_INT_$2");
+        				String weak_ng = ngramPrefix.matcher(ng).replaceAll("$1_WEA_$2");
+        				addNgram ("lemma", not_ng);
+        				addNgram ("lemma", int_ng);
+        				addNgram ("lemma", weak_ng);
+        			}
         		}
         	}
         	//empty ngram list and add remaining ngrams to the feature list
@@ -2262,6 +2420,15 @@ public class Features {
         	{
         		String ng = featureFromArray(ngrams, "lemma");
         		addNgram ("lemma", ng);
+        		if (mod>1)
+    			{
+    				String not_ng = ngramPrefix.matcher(ng).replaceAll("$1_SHI_$2");
+    				String int_ng = ngramPrefix.matcher(ng).replaceAll("$1_INT_$2");
+    				String weak_ng = ngramPrefix.matcher(ng).replaceAll("$1_WEA_$2");
+    				addNgram ("lemma", not_ng);
+    				addNgram ("lemma", int_ng);
+    				addNgram ("lemma", weak_ng);
+    			}
         		ngrams.removeFirst();
         	}
         }        
@@ -2329,6 +2496,17 @@ public class Features {
 	 */
 	private void addNgram (String type, String ngram)
 	{
+		
+		//cut the prefix (group 2 stores the actual ngram while group 1 is the prefix)
+		String rawNgram = ngramPrefix.matcher(ngram).replaceAll("$2");
+		String rawNgramNoMod = modifierPrefix.matcher(rawNgram).replaceAll("$2");
+		//if the ngram is in the stopword list exit without adding the ngram. This is not applied to PoS tags  
+		if ((!type.equalsIgnoreCase("pos")) && stopwords.contains(rawNgramNoMod))
+		{
+			//System.err.println("Features::addNgram - stopword found! won't be added to the features: "+ngram);
+			return;					
+		}
+						
 		int freq = 0;        					
 		switch (type)
 		{
@@ -2630,6 +2808,94 @@ public class Features {
 	
 	
 	/**
+	 * featureFromArray converts a list of  ngram/words into a numeric feature to the feature vector of the classifier
+	 * @param feat
+	 * @param prefix
+	 */
+	private String featureFromTermArray(List<Term> feat, String prefix, List<Term> previous) {
+				
+		StringBuilder sb = new StringBuilder();
+		StringBuilder sbp = new StringBuilder();
+		for (Term t: feat)
+		{			
+			sb.append(t.getLemma()).append("_");
+			String morphofeat = t.getMorphofeat();
+			if (morphofeat.length()>2)
+			{
+				morphofeat = morphofeat.substring(0, 2);
+			}
+			sbp.append(morphofeat).append("_");
+			//pos= t.getMorphofeat();
+		}
+		
+		String ng = sb.toString().toLowerCase().substring(0, sb.length()-1); //.toLowerCase()
+		String pos = sbp.toString().substring(0, sbp.length()-1);
+		
+		boolean shifterFound=false;
+		for (Term pt : previous)
+		{
+			//NOT Rule (NOT-V,NOT-ADJ, NOT-N)
+			if (pt.getMorphofeat().equals("RN")
+					&& (polarLexiconGen.isInLexicon(pt.getLemma()) || polarLexiconDom.isInLexicon(pt.getLemma()))
+					&& (polarLexiconGen.getScalarPolarity(pt.getLemma())==4))
+			{
+				if (pos.startsWith("V") || pos.startsWith("A") || pos.startsWith("NC"))
+				{
+					ng = "SHI_"+ng;
+					shifterFound=true;
+					;
+				}
+			}
+			
+			//ADV-ADJ rule
+			else if (pt.getMorphofeat().equals("RG")
+					&& (polarLexiconGen.isInLexicon(pt.getLemma()) || polarLexiconDom.isInLexicon(pt.getLemma()))
+					&& (polarLexiconGen.getScalarPolarity(pt.getLemma())>2))
+			{
+				if (pos.startsWith("AQ"))
+				{	
+					switch (polarLexiconGen.getScalarPolarity(pt.getLemma()))
+					{	
+					case 2: ng="INT_"+ng; break;
+					case 3: ng="WEA_"+ng; break;
+					}
+				}
+			}
+			
+			//V-ADV rule
+			else if (pt.getMorphofeat().startsWith("V")
+					&& (polarLexiconGen.isInLexicon(pt.getLemma()) || polarLexiconDom.isInLexicon(pt.getLemma()))
+					&& (polarLexiconGen.getNumericPolarity(pt.getLemma()) != 0))
+			{
+				int pol_ng = polarLexiconGen.getScalarPolarity(ng);
+				if (pos.startsWith("RG"))
+				{	
+					switch (pol_ng)
+					{
+					case 2: ng="INT_"+ng; break;
+					case 3: ng="WEA_"+ng; break;
+					}
+				}
+			}
+			
+		}
+		
+		// feature prefix
+		switch (prefix)
+		{
+		case "wf": ng = "WF_"+ng; break;
+		case "lemma": ng = "LEM_"+ng; break;                				
+		case "pos":	ng = "POS_"+ng; break;
+		case "" : break;
+		default: ng = prefix+"_"+ng; break;
+		}	
+		
+		return ng;
+	}
+	
+	
+	
+	/**
 	 * addNumericFeatureSet adds a set numeric features to the feature vector of the classifier
 	 * 
 	 * @param feat
@@ -2733,6 +2999,7 @@ public class Features {
 	 * @param double[] fVector : feature vector for the corresponding instance
 	 * @param int tokens : number of tokens in the sentence (in case we want to add not a frequency value
 	 * but a normalized value)
+	 * @param boolean empty : whether we are at the end of the sentence or not (if so, list must be emptied)
 	 * 
 	 */
 	private void checkNgramFeatures (LinkedList<String> ngrams, double[] fVector, String prefix, int tokens, boolean empty)
@@ -2746,7 +3013,7 @@ public class Features {
 			while (!ngrams.isEmpty())
 			{
 				String ng = featureFromArray(ngrams, prefix);
-				//add occurrence to feature vector (the functions checks if the given ngram feature exists).
+				//add occurrence to feature vector (the function checks if the given ngram feature exists).
 				addNumericToFeatureVector (ng, fVector, tokens); //tokNum
 				
 				ngrams.removeFirst();
@@ -2776,15 +3043,50 @@ public class Features {
 	 */
 	private void checkPolarityLexicons(String wrd, double[] fVector, int tokNum, boolean ngrams)
 	{
+		String lookupWrd=wrd;
+		
+		double modIndex = 1;
+		boolean shift = false;
+
+		//modifier treatment
+		Matcher m = modifierPrefix.matcher(wrd);
+		if (m.matches())
+		{
+			switch (m.group(2))
+			{
+			case "INT":	modIndex=1.5; break;
+			case "WEA": modIndex=0.5; break;
+			case "SHI": shift=true; break;				
+			}
+			lookupWrd = m.replaceAll("$2");
+		}
+		
 		// fill vector with general polarity scores
 		if ((polarLexiconGen != null) && (polarLexiconGen.size()>0)) //(!polarLexiconGen.isEmpty()))
 		{
-			if (polarLexiconGen.isInLexicon(wrd))
-			{
-				//fVector[getAttIndexes().get("polLexGen_posScore")]+=(polarLexiconGen.get(wrd).get("pos")/(double)tokNum);
-				//fVector[getAttIndexes().get("polLexGen_negScore")]+=(polarLexiconGen.get(wrd).get("neg")/(double)tokNum);
-				fVector[getAttIndexes().get("polLexGen_posScore")]+=(polarLexiconGen.getPolarity(wrd).getPositiveScore()/(double)tokNum);
-				fVector[getAttIndexes().get("polLexGen_negScore")]+=(polarLexiconGen.getPolarity(wrd).getNegativeScore()/(double)tokNum);
+			int posScoreIndex = getAttIndexes().get("polLexGen_posScore");
+			int negScoreIndex = getAttIndexes().get("polLexGen_negScore");					
+			
+			if (polarLexiconGen.isInLexicon(lookupWrd))
+			{				
+				double posScore = polarLexiconGen.getPolarity(lookupWrd).getPositiveScore()*modIndex;
+				double negScore = polarLexiconGen.getPolarity(lookupWrd).getNegativeScore()*modIndex;
+				
+				// if word polarity balance is positive invert polarities P>N N>P
+				if (shift && posScore-negScore>0)
+				{
+					double b = negScore;
+					negScore = posScore;
+					posScore = b;
+				}
+				else if (shift && posScore-negScore<0)
+				{
+					posScore = negScore;
+					negScore = 0;
+				}
+				
+				fVector[posScoreIndex]+=(posScore/(double)tokNum);
+				fVector[negScoreIndex]+=(negScore/(double)tokNum);
 
 				if (ngrams)
 				{
@@ -2796,18 +3098,36 @@ public class Features {
 		// fill vector with domain polarity scores
 		if ((polarLexiconDom != null) && (polarLexiconDom.size()>0)) //(!polarLexiconDom.isEmpty()))
 		{
-			if (polarLexiconDom.isInLexicon(wrd))
-			{
+			int posScoreIndex = getAttIndexes().get("polLexDom_posScore");
+			int negScoreIndex = getAttIndexes().get("polLexDom_negScore");			
+			
+			if (polarLexiconDom.isInLexicon(lookupWrd))
+			{				
+				double posScore = polarLexiconDom.getPolarity(lookupWrd).getPositiveScore()*modIndex;
+				double negScore = polarLexiconDom.getPolarity(lookupWrd).getNegativeScore()*modIndex;
+					
+				// if word polarity balance is positive invert polarities P>N N>P
+				if (shift && posScore-negScore>0)
+				{
+					double b = negScore;
+					negScore = posScore;
+					posScore = b;
+				}
+				// if word polarity balance is negative polarity is nullified and N>0 P>0
+				else if (shift && posScore-negScore<0)
+				{
+					posScore = 0;
+					negScore = 0;
+				}
 				//fVector[getAttIndexes().get("polLexDom_posScore")]+=(polarLexiconDom.get(wrd).get("pos")/(double)tokNum);
 				//fVector[getAttIndexes().get("polLexDom_negScore")]+=(polarLexiconDom.get(wrd).get("neg")/(double)tokNum);
-				fVector[getAttIndexes().get("polLexDom_posScore")]+=(polarLexiconDom.getPolarity(wrd).getPositiveScore()/(double)tokNum);
-				fVector[getAttIndexes().get("polLexDom_negScore")]+=(polarLexiconDom.getPolarity(wrd).getNegativeScore()/(double)tokNum);
+				fVector[posScoreIndex]+=(posScore/(double)tokNum);
+				fVector[negScoreIndex]+=(negScore/(double)tokNum);
 
 				if (ngrams)
 				{
 					fVector[getAttIndexes().get("poldom_"+wrd)]++;
 				}
-
 			}
 		}
 		
@@ -2877,6 +3197,14 @@ public class Features {
 	}
 	
 	
+	
+	
+	/**
+	 * Set the corpus used to extract features.
+	 * 
+	 * 
+	 * @param corp
+	 */
 	public void setCorpus(CorpusReader corp)
 	{
 		this.corpus = corp;
@@ -2924,5 +3252,19 @@ public class Features {
 			return input;
 		}
 	}	
+	
+	/**
+	 * Set stopword list from file in resources. If no file is found the system proceeds with an empty stopword list. 
+	 * */
+	private void setStopwords(InputStream stopWrdStream) {
+		try{
+			this.stopwords = FileUtilsElh.loadOneColumnResource(stopWrdStream);
+		}catch (IOException ioe){
+			System.err.println("MicroTextNormalizer::Constructor - Stopword list could not be read. System proceeds with "
+					+ "an empty stopword list.");
+		}
+		System.err.println("Features::setStopwords - stopword list loaded: "+stopwords.size());	
+	}
+
 	
 }

@@ -35,6 +35,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -374,6 +375,12 @@ public final class FileUtilsElh {
 	{
 		HashMap<String, String> result = new HashMap<String, String>();		
 		
+		if (resource == null)
+		{
+			System.err.println("FileUtilsElh::loadTwoColumnResource - resource is null");
+			return result;
+		}	
+		
 		BufferedReader breader = new BufferedReader(new InputStreamReader(resource));
 		String line;
 		while ((line = breader.readLine()) != null) 
@@ -392,4 +399,71 @@ public final class FileUtilsElh {
 		breader.close();
 		return result;
 	}
+	
+	/**
+	 * Function reads a single column file and stores the values into a HashSet<String> object 
+	 * 
+	 * @param resource : InputStream containing the two column resource
+	 * @return HashSet<String> contains the elements and their respective attribute values 
+	 * 
+	 * @throws IOException if the given resource has reading problems.
+	 */
+	public static HashSet<String> loadOneColumnResource(InputStream resource) 
+			throws IOException
+	{
+		HashSet<String> result = new HashSet<String>();		
+		if (resource == null)
+		{
+			System.err.println("FileUtilsElh::loadOneColumnResource - resource is null");
+			return result;
+		}		
+		
+		BufferedReader breader = new BufferedReader(new InputStreamReader(resource));
+		String line;
+		while ((line = breader.readLine()) != null) 
+		{
+			if (line.startsWith("#") || line.matches("^\\s*$"))
+			{
+				continue;
+			}
+			try{
+				result.add(line.trim());
+				//System.err.println("FileUtilsElh::loadOneColumnResource - "+line.trim());
+			}catch (IndexOutOfBoundsException ioobe){
+				System.err.println("FileUtilsElh::loadOneColumnResource - "+line);
+			}
+		}											
+		breader.close();
+		return result;
+	}
+	
+    /**
+     * This method ensures that the output String has only
+     * valid XML unicode characters as specified by the
+     * XML 1.0 standard. For reference, please see
+     * <a href="http://www.w3.org/TR/2000/REC-xml-20001006#NT-Char">the
+     * standard</a>. This method will return an empty
+     * String if the input is null or empty.
+     *
+     * @param in The String whose non-valid characters we want to remove.
+     * @return The in String, stripped of non-valid characters.
+     */
+    public static String stripNonValidXMLCharacters(String in) {
+        StringBuffer out = new StringBuffer(); // Used to hold the output.
+        char current; // Used to reference the current character.
+
+        if (in == null || ("".equals(in))) return ""; // vacancy test.
+        for (int i = 0; i < in.length(); i++) {
+            current = in.charAt(i); // NOTE: No IndexOutOfBoundsException caught here; it should not happen.
+            if ((current == 0x9) ||
+                (current == 0xA) ||
+                (current == 0xD) ||
+                ((current >= 0x20) && (current <= 0xD7FF)) ||
+                ((current >= 0xE000) && (current <= 0xFFFD)) ||
+                ((current >= 0x10000) && (current <= 0x10FFFF)))
+                out.append(current);
+        }
+        return out.toString();
+    }    
+	
 }

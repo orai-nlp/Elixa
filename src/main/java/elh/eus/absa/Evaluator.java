@@ -167,7 +167,6 @@ public class Evaluator {
 	public Evaluator (File LexPath, String syn, float thresh, String algorithm)
 	{
 		this.lexicon = new Lexicon(LexPath, syn);
-		//System.out.println("AvgRatioEstimator: lexicon loaded --> "+LexPath+" - "+lexicon.size()+" entries");
 		System.err.println("AvgRatioEstimator: lexicon loaded --> "+LexPath+" - "+lexicon.size()+" entries");
 		//System.err.println("AvgRatioEstimator: lexicon loaded --> "+lexicon.getNumericPolarity("larri")+" proba");
 		this.setThreshold(thresh);

@@ -204,7 +204,7 @@ public class CLI {
 		} catch (ArgumentParserException e) {
 			argParser.handleError(e);
 			System.out.println("Run java -jar target/elixa-" + version
-					+ ".jar (train-atc|slot2|tagSentences|tag-ate|train-gp|tag-gp|tag-naf) -help for details");
+					+ ".jar (train-atc|slot2|tagSentences|tag-ate|train-gp|eval-gp|tag-gp|tag-naf) -help for details");
 			System.exit(1);
 		}
 	}
@@ -215,7 +215,8 @@ public class CLI {
 		//String files = parsedArguments.getString("file");
 		String lexicon = parsedArguments.getString("lexicon");
 		//String estimator = parsedArguments.getString("estimator");
-		//String synset = parsedArguments.getString("synset");
+		String synset = parsedArguments.getString("synset");
+		//String dictw = parsedArguments.getString("weights");
 		float threshold = parsedArguments.getFloat("threshold");
 		boolean printPol = parsedArguments.getBoolean("estimatePolarity");
 		
@@ -228,7 +229,7 @@ public class CLI {
 				KAFDocument naf = KAFDocument.createFromStream(new InputStreamReader(inputStream));
 				
 				File lexFile = new File(lexicon);
-				Evaluator evalDoc = new Evaluator(lexFile, "lemma", threshold, "avg");
+				Evaluator evalDoc = new Evaluator(lexFile, synset, threshold, "avg");
 				Map<String, String> results = evalDoc.processKaf(naf, lexFile.getName());
 				naf.print();
 				if (printPol)
@@ -278,17 +279,17 @@ public class CLI {
 		.required(true)
 		.help("Path to the polarity lexicon file.\n");
 
-		//predictParser.addArgument("-s", "--synset")
-		//.choices("lemma", "first","rank")
-		//.required(false)
-		//.setDefault("lemma")
-		//.help(
-		//		"Default polarities are calculated over lemmas. With this option polarity of synsets is taken into account instead of words. Possible values: (lemma|first|rank). 'first' uses the sense with the highest confidence value for the lemma. 'rank' uses complete ranking of synsets.\n");
+		predictParser.addArgument("-s", "--synset")
+		.choices("lemma", "first","rank")
+		.required(false)
+		.setDefault("lemma")
+		.help(
+				"Default polarities are calculated over lemmas. With this option polarity of synsets is taken into account instead of words. Possible values: (lemma|first|rank). 'first' uses the sense with the highest confidence value for the lemma. 'rank' uses complete ranking of synsets.\n");
 
-		//predictParser.addArgument("-w", "--weights")
-		//.action(Arguments.storeTrue())
-		//.help(
-		//		"Use polarity weights instead of binary polarities (pos/neg). If the dictionary does not provide polarity scores the program defaults to binary polarities.\n");
+//		predictParser.addArgument("-w", "--weights")
+//		.action(Arguments.storeTrue())
+//		.help(
+//				"Use polarity weights instead of binary polarities (pos/neg). If the dictionary does not provide polarity scores the program defaults to binary polarities.\n");
 
 		predictParser.addArgument("-t", "--threshold")
 		.required(false)
@@ -310,16 +311,18 @@ public class CLI {
 	public final void tagSents(final InputStream inputStream)
 	{
 		String posModel = parsedArguments.getString("model");
+		String lemmaModel = parsedArguments.getString("lemmaModel");
 		String dir = parsedArguments.getString("dir");
 		String lang = parsedArguments.getString("language");
 		String format = parsedArguments.getString("format");
 		boolean print = parsedArguments.getBoolean("print");
 		
+		System.err.println("Sentence tagging CLI, going to read the corpus.");
 		CorpusReader reader = new CorpusReader(inputStream, format, lang);
 		try {
 			String tagDir= dir+File.separator+lang;
 			Files.createDirectories(Paths.get(tagDir));
-			reader.tagSentences(tagDir, posModel, print);
+			reader.tagSentences(tagDir, posModel, lemmaModel, print);
 		} catch (Exception e) {			
 			e.printStackTrace();
 		} 
@@ -331,6 +334,9 @@ public class CLI {
 		tagSentParser.addArgument("-m", "--model")
 		.required(true)
 		.help("Pass the model to do the tagging as a parameter.\n");
+		tagSentParser.addArgument("-lm", "--lemmaModel")
+		.required(true)
+		.help("Pass the model to do the lemmatization as a parameter.\n");
 		tagSentParser.addArgument("-d", "--dir")
 		.required(true)
 		.help("directory to store tagged files.\n");
@@ -425,6 +431,7 @@ public class CLI {
 		}
 		else
 		{
+			//traindata = atpTrain.loadInstancesMod(true, "atp");
 			traindata = atpTrain.loadInstances(true, "atp");
 		}
 		
@@ -524,6 +531,7 @@ public class CLI {
 			params.load(new FileInputStream(new File(paramFile)));
 
 			String posModelPath = params.getProperty("pos-model");
+			String lemmaModelPath = params.getProperty("lemma-model");
 			String kafDir = params.getProperty("kafDir");
 			
 			/* polarity lexicon. Domain specific polarity lexicon is given priority.
@@ -547,7 +555,7 @@ public class CLI {
 			for (String oId : reader.getOpinions().keySet())
 			{
 				// sentence posTagging
-				String taggedKaf = reader.tagSentenceTab(reader.getOpinion(oId).getsId(), kafDir, posModelPath);
+				String taggedKaf = reader.tagSentenceTab(reader.getOpinion(oId).getsId(), kafDir, posModelPath, lemmaModelPath);
 				//process the postagged sentence with the word count based polarity tagger
 				Map<String, String> results = evalDoc.polarityScoreTab(taggedKaf, lexFile.getName());				 
 				String lblStr = results.get("polarity");
@@ -696,6 +704,7 @@ public class CLI {
 			params.load(new FileInputStream(new File(paramFile)));
 
 			String posModelPath = params.getProperty("pos-model");
+			String lemmaModelPath = params.getProperty("lemma-model");
 			String kafDir = params.getProperty("kafDir");
 			
 			/* polarity lexicon. Domain specific polarity lexicon is given priority.
@@ -719,7 +728,7 @@ public class CLI {
 			for (String oId : reader.getOpinions().keySet())
 			{
 				// sentence posTagging
-				String taggedKaf = reader.tagSentenceTab(reader.getOpinion(oId).getsId(), kafDir, posModelPath);
+				String taggedKaf = reader.tagSentenceTab(reader.getOpinion(oId).getsId(), kafDir, posModelPath, lemmaModelPath);
 				//process the postagged sentence with the word count based polarity tagger
 				Map<String, String> results = evalDoc.polarityScoreTab(taggedKaf, lexFile.getName());				 
 				String lblStr = results.get("polarity");

@@ -76,6 +76,9 @@ public class CorpusReader {
 	//corpus format	(semeval2014|semeval2015|tab|tabglobal)
 	private String format;
 	
+	//pattern to match eustagger executable
+	private Pattern eustagger = Pattern.compile("(eustagger|euslem|ixa-pipe-pos-eu)",Pattern.CASE_INSENSITIVE);
+
 	
 	/**
 	 * Constructor. 
@@ -822,8 +825,8 @@ public class CorpusReader {
 			
 			if (fields.length < 3)
 			{
-				System.err.println("CorpusReader::readIreomSentencesToTag : bad sentence format, format must be:\n"
-						+ "\t\"id<tab>polarity<tab>text[<tab>addittionalfields]\"\t"
+				System.err.println("CorpusReader::readTabNotaggedCorpus : bad sentence format, format must be:\n"
+						+ "\t\"id<tab>polarity<tab>text[<tab>addittionalfields]\"\t("+fields[0]+") "
 						+ "sentence won't be annotated.");
 				continue;
 			}
@@ -1034,33 +1037,39 @@ public class CorpusReader {
 	 * @throws IOException
 	 * @throws JDOMException
 	 */
-	public void tagSentences(String nafdir, String posModel, boolean print) throws IOException, JDOMException
+	public void tagSentences(String nafdir, String posModel, String lemmaModel, boolean print) throws IOException, JDOMException
 	{				
-		KAFDocument kafinst = new KAFDocument("","");
+		KAFDocument nafinst = new KAFDocument("","");
 		for (String sId : getSentences().keySet())
 		{
-			String kafname = sId.replace(':', '_');
-			String kafPath = nafdir+File.separator+kafname+".kaf";			
-			if (FileUtilsElh.checkFile(kafPath))
+			String nafname = sId.replace(':', '_');
+			String nafPath = nafdir+File.separator+nafname+".kaf";			
+			if (FileUtilsElh.checkFile(nafPath))
 			{
-				System.err.println("CorpusReader::tagSentence : file already there:"+kafPath);
+				System.err.println("CorpusReader::tagSentence : file already there:"+nafPath);
 			}
-			// if language is basque 'posModel' argument is used to pass the path to the basque morphological analyzer eustagger 
-			else if (lang.compareToIgnoreCase("eu")==0)
+			/* if language is basque 'posModel' argument can be used to pass the path to the 
+			 * basque morphological analyzer eustagger. If the path does not contain "eustagger" or "euslem" 
+			 * (usual executable names for the tagger) it defaults to ixa-pipes.
+			 * */ 
+			else if (eustagger.matcher(posModel).find())
 			{
-				int ok =NLPpipelineWrapper.eustaggerCall(posModel, getSentences().get(sId), nafdir+File.separator+kafname);				
+				int ok =NLPpipelineWrapper.eustaggerCall(posModel, getSentences().get(sId), nafdir+File.separator+nafname);				
 			}
 			else
 			{
-				kafinst = NLPpipelineWrapper.ixaPipesTokPos(getSentences().get(sId), lang, posModel);
-				kafinst.save(kafPath);										
+				nafinst = NLPpipelineWrapper.ixaPipesTokPos(getSentences().get(sId), lang, posModel, lemmaModel);
+				//System.err.println(nafinst.toString());
+				//nafinst.print();
+				//System.err.println("corpusReader::tagSentences naf printed.	");
+				nafinst.save(nafPath);										
 			}
 			
 			if (print)
 			{
 				String toprint = "<doc id=\""+sId+"\" polarity=\""+getSentenceOpinions(sId).get(0).getPolarity()+"\">";
 				System.out.println(toprint);
-				System.out.println(IOUtils.toString(new FileInputStream(new File(kafPath))));
+				System.out.println(IOUtils.toString(new FileInputStream(new File(nafPath))));
 				System.out.println("</doc>");
 			}
 		}		
@@ -1077,7 +1086,7 @@ public class CorpusReader {
 	 * @throws IOException
 	 * @throws JDOMException
 	 */
-	public String tagSentence(String sId, String nafdir, String posModel) throws IOException, JDOMException
+	public String tagSentence(String sId, String nafdir, String posModel, String lemmatizerModel) throws IOException, JDOMException
 	{				
 		KAFDocument kafinst = new KAFDocument("","");
 		
@@ -1087,14 +1096,17 @@ public class CorpusReader {
 		{
 			System.err.println("CorpusReader::tagSentence : file already there:"+kafPath);
 		}
-		// if language is basque 'posModel' argument is used to pass the path to the basque morphological analyzer eustagger 
-		else if (lang.compareToIgnoreCase("eu")==0)
+		/* if language is basque 'posModel' argument can be used to pass the path to the 
+		 * basque morphological analyzer eustagger. If the path does not contain "eustagger" or "euslem" 
+		 * (usual executable names for the tagger) it defaults to ixa-pipes.
+		 * */ 
+		else if (eustagger.matcher(posModel).find())
 		{
 			int ok =NLPpipelineWrapper.eustaggerCall(posModel, getSentences().get(sId), nafdir+File.separator+kafname);
 		}
 		else
 		{
-			kafinst = NLPpipelineWrapper.ixaPipesTokPos(getSentences().get(sId), lang, posModel);
+			kafinst = NLPpipelineWrapper.ixaPipesTokPos(getSentences().get(sId), lang, posModel, lemmatizerModel);
 			kafinst.save(kafPath);										
 		}
 		return kafPath;
@@ -1111,7 +1123,7 @@ public class CorpusReader {
 	 * @throws IOException
 	 * @throws JDOMException
 	 */
-	public String tagSentenceTab(String sId, String nafdir, String posModel) throws IOException, JDOMException
+	public String tagSentenceTab(String sId, String nafdir, String posModel, String lemmatizerModel) throws IOException, JDOMException
 	{				
 		KAFDocument kafinst = new KAFDocument("","");
 		
@@ -1121,14 +1133,17 @@ public class CorpusReader {
 		{
 			System.err.println("CorpusReader::tagSentence : file already there:"+savePath);
 		}
-		// if language is basque 'posModel' argument is used to pass the path to the basque morphological analyzer eustagger 
-		else if (lang.compareToIgnoreCase("eu")==0)
+		/* if language is basque 'posModel' argument can be used to pass the path to the 
+		 * basque morphological analyzer eustagger. If the path does not contain "eustagger" or "euslem" 
+		 * (usual executable names for the tagger) it defaults to ixa-pipes.
+		 * */ 
+		else if (eustagger.matcher(posModel).find())
 		{
 			int ok =NLPpipelineWrapper.eustaggerCall(posModel, getSentences().get(sId), nafdir+File.separator+savename);
 		}
 		else
 		{
-			String conll = NLPpipelineWrapper.ixaPipesTokPosConll(getSentences().get(sId), lang, posModel);
+			String conll = NLPpipelineWrapper.ixaPipesTokPosConll(getSentences().get(sId), lang, posModel, lemmatizerModel);
 			FileUtils.writeStringToFile(new File(savePath), conll);										
 		}
 		return savePath;
