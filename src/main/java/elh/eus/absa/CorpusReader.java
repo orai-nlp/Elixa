@@ -76,6 +76,9 @@ public class CorpusReader {
 	//corpus format	(semeval2014|semeval2015|tab|tabglobal)
 	private String format;
 	
+	//pattern to match eustagger executable
+	private Pattern eustagger = Pattern.compile("(eustagger|euslem|ixa-pipe-pos-eu)",Pattern.CASE_INSENSITIVE);
+
 	
 	/**
 	 * Constructor. 
@@ -1045,8 +1048,11 @@ public class CorpusReader {
 			{
 				System.err.println("CorpusReader::tagSentence : file already there:"+nafPath);
 			}
-			// if language is basque 'posModel' argument is used to pass the path to the basque morphological analyzer eustagger 
-			else if (lang.compareToIgnoreCase("eu")==0)
+			/* if language is basque 'posModel' argument can be used to pass the path to the 
+			 * basque morphological analyzer eustagger. If the path does not contain "eustagger" or "euslem" 
+			 * (usual executable names for the tagger) it defaults to ixa-pipes.
+			 * */ 
+			else if (eustagger.matcher(posModel).find())
 			{
 				int ok =NLPpipelineWrapper.eustaggerCall(posModel, getSentences().get(sId), nafdir+File.separator+nafname);				
 			}
@@ -1090,8 +1096,11 @@ public class CorpusReader {
 		{
 			System.err.println("CorpusReader::tagSentence : file already there:"+kafPath);
 		}
-		// if language is basque 'posModel' argument is used to pass the path to the basque morphological analyzer eustagger 
-		else if (lang.compareToIgnoreCase("eu")==0)
+		/* if language is basque 'posModel' argument can be used to pass the path to the 
+		 * basque morphological analyzer eustagger. If the path does not contain "eustagger" or "euslem" 
+		 * (usual executable names for the tagger) it defaults to ixa-pipes.
+		 * */ 
+		else if (eustagger.matcher(posModel).find())
 		{
 			int ok =NLPpipelineWrapper.eustaggerCall(posModel, getSentences().get(sId), nafdir+File.separator+kafname);
 		}
@@ -1124,8 +1133,11 @@ public class CorpusReader {
 		{
 			System.err.println("CorpusReader::tagSentence : file already there:"+savePath);
 		}
-		// if language is basque 'posModel' argument is used to pass the path to the basque morphological analyzer eustagger 
-		else if (lang.compareToIgnoreCase("eu")==0)
+		/* if language is basque 'posModel' argument can be used to pass the path to the 
+		 * basque morphological analyzer eustagger. If the path does not contain "eustagger" or "euslem" 
+		 * (usual executable names for the tagger) it defaults to ixa-pipes.
+		 * */ 
+		else if (eustagger.matcher(posModel).find())
 		{
 			int ok =NLPpipelineWrapper.eustaggerCall(posModel, getSentences().get(sId), nafdir+File.separator+savename);
 		}

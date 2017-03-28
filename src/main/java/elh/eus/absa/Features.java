@@ -119,6 +119,9 @@ public class Features {
 	private Pattern modifierPrefix = Pattern.compile("(SHI|INT|WEA)_(.*)$"); 
 	private Pattern ngPattern = Pattern.compile("^((WF|LEM|POS)_)?((SHI|INT|WEA)_)*(.*)$");
 	
+	//pattern to match eustagger executable
+	private Pattern eustagger = Pattern.compile("(eustagger|euslem|ixa-pipe-pos-eu)",Pattern.CASE_INSENSITIVE);
+
 	
 	/**
 	 *  Constructor
@@ -418,12 +421,14 @@ public class Features {
 		//Corpus tagging, if the corpus is not in conll tabulated format
         if (corpus.getFormat().equalsIgnoreCase("tabNotagged") || !corpus.getFormat().startsWith("tab"))
         {
-        	if ((params.containsKey("lemmaNgrams") || (params.containsKey("pos") && !params.getProperty("pos").equalsIgnoreCase("0")))
-        			&& (corpus.getLang().compareToIgnoreCase("eu")!=0))
+        	if ((params.containsKey("lemmaNgrams") || (params.containsKey("pos") && !params.getProperty("pos").equalsIgnoreCase("0"))))
         	{
-        		Properties posProp = NLPpipelineWrapper.setPostaggerProperties( params.getProperty("pos-model"), params.getProperty("lemma-model"),
-        				corpus.getLang(), "false", "false");					
-        		postagger = new eus.ixa.ixa.pipe.pos.Annotate(posProp);						
+        		if (!eustagger.matcher(params.getProperty("pos-model")).find())
+        		{
+        			Properties posProp = NLPpipelineWrapper.setPostaggerProperties( params.getProperty("pos-model"), params.getProperty("lemma-model"),
+        					corpus.getLang(), "false", "false");					
+        			postagger = new eus.ixa.ixa.pipe.pos.Annotate(posProp);
+        		}
         	}
 
         	

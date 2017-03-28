@@ -36,6 +36,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Properties;
+import java.util.regex.Pattern;
 
 import org.apache.commons.io.FileUtils;
 import org.jdom2.JDOMException;
@@ -467,14 +468,19 @@ public final class NLPpipelineWrapper {
 	public static String tagSentence(String input, String savePathNoExt, String lang, String posModel, String lemmaModel, eus.ixa.ixa.pipe.pos.Annotate postagger) throws IOException, JDOMException
 	{				
 		KAFDocument kafinst = new KAFDocument("","");
-					
+			
+		System.err.println(posModel);
 		if (FileUtilsElh.checkFile(savePathNoExt+".kaf"))
 		{
 			//System.err.println("NLPpipelineWrapper::tagSentence : file already there:"+savePathNoExt+".kaf");
 			return savePathNoExt+".kaf";
 		}
-		// if language is basque 'posModel' argument is used to pass the path to the basque morphological analyzer eustagger 
-		else if (lang.compareToIgnoreCase("eu")==0)
+		
+		/* if language is basque 'posModel' argument can be used to pass the path to the 
+		 * basque morphological analyzer eustagger. If the path does not contain "eustagger" or "euslem" 
+		 * (usual executable names for the tagger) it defaults to ixa-pipes.
+		 * */
+		else if (Pattern.compile("(eustagger|euslem|ixa-pipe-pos-eu)", Pattern.CASE_INSENSITIVE).matcher(posModel).find())
 		{
 			int ok =eustaggerCall(posModel, input, savePathNoExt);
 		}
