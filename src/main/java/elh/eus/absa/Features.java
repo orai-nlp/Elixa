@@ -855,32 +855,31 @@ public class Features {
 					if (FileUtilsElh.checkFile(nafPath))
 					{
 						// can not use directly KAFDocument.createFromFile because a kaflib bug (non valid xml chars are inserted in comments.)
-					    File nafFile = new File(nafPath);
-					    String cleanKAF = FileUtilsElh.stripNonValidXMLCharacters(FileUtils.readFileToString(nafFile));
-					    FileUtils.deleteQuietly(nafFile);
-					    FileUtils.writeStringToFile(nafFile,cleanKAF);
+					    //File nafFile = new File(nafPath);
+					    //String cleanKAF = FileUtilsElh.stripNonValidXMLCharacters(FileUtils.readFileToString(nafFile));
+					    //FileUtils.deleteQuietly(nafFile);
+					    //FileUtils.writeStringToFile(nafFile,cleanKAF);
 					    nafinst = KAFDocument.createFromFile(new File(nafPath));						
 					}
 					else
 					{
 						Files.createDirectories(Paths.get(nafDir));
-						nafinst = NLPpipelineWrapper.ixaPipesTokPos(opNormalized, corpus.getLang(),  params.getProperty("pos-model"), postagger);						
-						nafinst.print();
+						nafinst = NLPpipelineWrapper.ixaPipesTokPos(opNormalized, corpus.getLang(),  params.getProperty("pos-model"), postagger);												
 						nafinst.save(nafPath);
 						
 					}
 					tokNum = nafinst.getWFs().size();
-					System.err.println("Features::loadInstances - postagging opinion sentence ("+oId+") - "+corpus.getOpinionSentence(oId));
+					//System.err.println("Features::loadInstances - postagging opinion sentence ("+oId+") - "+corpus.getOpinionSentence(oId));
 				}
 				else
 				{
 					if (FileUtilsElh.checkFile(nafPath))
 					{
 						// can not use directly KAFDocument.createFromFile because a kaflib bug (non valid xml chars are inserted in comments.)												
-						File nafFile = new File(nafPath);
-					    String cleanKAF = FileUtilsElh.stripNonValidXMLCharacters(FileUtils.readFileToString(nafFile));
-					    FileUtils.deleteQuietly(nafFile);
-					    FileUtils.writeStringToFile(nafFile,cleanKAF);
+						//File nafFile = new File(nafPath);
+					    //String cleanKAF = FileUtilsElh.stripNonValidXMLCharacters(FileUtils.readFileToString(nafFile));
+					    //FileUtils.deleteQuietly(nafFile);
+					    //FileUtils.writeStringToFile(nafFile,cleanKAF);
 					    nafinst = KAFDocument.createFromFile(new File(nafPath));
 					}
 					else

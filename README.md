@@ -96,9 +96,9 @@ Get the resources from https://github.com/ixa-ehu/ixa-pipe-pos#resources and unp
 
 ````shell
 cd elixa
-wget http://ixa2.si.ehu.es/ixa-pipes/models/pos-resources.tgz
+wget http://ixa2.si.ehu.es/ixa-pipes/models/lemmatizer-dicts.tar.gz
 src/main/resources
-tar -xzvf pos-resources.tgz -C src/main/resources
+tar -xzvf lemmatizer-dicts.tar.gz -C src/main/resources
 ````
 
 If you wish a better multiword term (MWT) recognition (for Spanish only) overwrite the file src/main/resources/lemmatizer-dicts/freeling/es-locutions.txt with the one in src/main/resources/es/es-locutions.txt
@@ -120,7 +120,7 @@ You can get the resources from http://komunitatea.elhuyar.org/ig/files/2016/02/e
 
 ````shell
 cd elixa
-wget http://komunitatea.elhuyar.org/ig/files/2016/02/elixa-resources_0.8.tgz
+wget http://komunitatea.elhuyar.eus/ig/files/2016/02/elixa-resources_0.8.tgz
 cd src/main/resources
 tar -xzvf elixa-resources_0.8.tgz
 ````
@@ -132,7 +132,7 @@ You can get the models from http://komunitatea.elhuyar.org/ig/files/2016/02/elix
 
 ````shell
 cd elixa
-wget http://komunitatea.elhuyar.org/ig/files/2016/02/elixa-behagunea-models_0.8.tar.gz
+wget http://komunitatea.elhuyar.eus/ig/files/2016/02/elixa-behagunea-models_0.8.tar.gz
 cd src/main/resources
 tar -xzvf elixa-behagunea-models_0.8.tar.gz
 ````

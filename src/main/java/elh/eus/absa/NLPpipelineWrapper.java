@@ -156,7 +156,7 @@ public final class NLPpipelineWrapper {
 		//pos tagger call
 		eus.ixa.ixa.pipe.pos.Annotate postagger = new eus.ixa.ixa.pipe.pos.Annotate(posProp);
 		posLp.setBeginTimestamp();		
-		System.err.println(postagger.annotatePOSToCoNLL(tokenizedKaf));
+		//System.err.println(postagger.annotatePOSToCoNLL(tokenizedKaf));
 		postagger.annotatePOSToKAF(tokenizedKaf);
 		posLp.setEndTimestamp();
 

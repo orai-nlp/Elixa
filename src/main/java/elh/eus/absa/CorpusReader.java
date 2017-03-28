@@ -1053,7 +1053,9 @@ public class CorpusReader {
 			else
 			{
 				nafinst = NLPpipelineWrapper.ixaPipesTokPos(getSentences().get(sId), lang, posModel, lemmaModel);
-				System.err.println(nafinst.toString());
+				//System.err.println(nafinst.toString());
+				//nafinst.print();
+				//System.err.println("corpusReader::tagSentences naf printed.	");
 				nafinst.save(nafPath);										
 			}
 			
