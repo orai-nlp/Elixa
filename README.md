@@ -110,13 +110,13 @@ cp src/main/resources/lemmatizer-dicts/freeling/es-locutions.txt src/main/resour
 cp src/main/resources/es/es-locutions.txt src/main/resources/lemmatizer-dicts/freeling/es-locutions.txt
 ````
 
-Also, you will need the postagging models for ixa-pipes. This are not needed at compilation time as you specify the pos-model file in the configuration file. You can get the model from https://github.com/ixa-ehu/ixa-pipe-pos#models . Elixa uses the 1.4.6 models.
+Also, you will need the postagging models for ixa-pipes. This are not needed at compilation time as you specify the pos-model file in the configuration file. You can get the model from https://github.com/ixa-ehu/ixa-pipe-pos#models . Elixa uses the 1.5.0 models.
 
 4. Resources
 ---------------------------
 
 EliXa may use several language specific resources, such as polarity lexicons and other resources for text normalization. We currently provide such resources for 4 languages; Basque (eu), Spanish (es), English (en) and French (fr). 
-You can get the resources from http://komunitatea.elhuyar.org/ig/files/2016/02/elixa-resources_0.8.tgz and unpack them in the src/main/resources directory
+You can get the resources from http://komunitatea.elhuyar.eus/ig/files/2016/02/elixa-resources_0.8.tgz and unpack them in the src/main/resources directory
 
 ````shell
 cd elixa
@@ -127,7 +127,7 @@ tar -xzvf elixa-resources_0.8.tgz
 
 We also basic polarity classification model for the previous languages. Models have been trained over Twitter data in the context of the Behagunea (behagunea.dss2016.eu) project. Data is specific on the topic "San Sebastian 2016 Cultural Capital of Europe". 
 
-You can get the models from http://komunitatea.elhuyar.org/ig/files/2016/02/elixa-behagunea-models_0.8.tar.gz.
+You can get the models from http://komunitatea.elhuyar.eus/ig/files/2016/02/elixa-behagunea-models_0.8.tar.gz.
 
 
 ````shell
