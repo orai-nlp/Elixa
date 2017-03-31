@@ -46,7 +46,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.RecursiveAction;
 import java.util.concurrent.RecursiveTask;
 
 import weka.core.Attribute;
@@ -62,7 +61,6 @@ import java.util.regex.Pattern;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.jdom2.JDOMException;
-import org.jdom2.input.JDOMParseException;
 
 
 
@@ -525,7 +523,16 @@ public class Features {
 //OLD IMPLEMENTATION SEQUENTIAL NORMALIZATION AND POS TAGGING        	
         	for (String key : corpSentenceIds)
         	{
-        		tagged+=normalizeAndTag(key,nafDir);        								
+        		long success = normalizeAndTag(key,nafDir);
+        		if (success == 0)
+        		{
+        			corpus.removeSentenceOpinions(key);
+        			corpus.removeSentence(key);
+        		}
+        		else
+        		{
+        			tagged+=success;
+        		}
         	}
         	
 //        	myRecursiveNLPtagging parallelTagging = new myRecursiveNLPtagging(corpSentenceIds, nafDir);
@@ -644,14 +651,24 @@ public class Features {
 //					}
 //					else
 //					{
+					File naffile = new File(nafPath);
+					if (naffile.length()==0){
+						System.err.println("Features::createFeatureSet -> naf file is empty for sentence "+key+" sentence will be deleted from training set");
+						corpus.removeSentence(key);
+					}
+					else
+					{
+						KAFDocument naf;
 						try {
-							KAFDocument naf = KAFDocument.createFromFile(new File(nafPath));
+							naf = KAFDocument.createFromFile(naffile);
 							// N-gram Feature vector : extracted from sentences
 							int success = extractLemmaNgrams(Integer.valueOf(params.getProperty("lemmaNgrams")), naf, discardPos, true);
-						} catch (IOException je){
+						} catch (IOException e) {
 							System.err.println("Features::createFeatureSet -> error when reading naf for sentence "+key+" sentence will be deleted from training set");
+							e.printStackTrace();
 							corpus.removeSentence(key);
-						}						
+						}
+					} 
 					//}
 				} 			
 				addNumericFeatureSet("", lemmaNgrams, lemmaMinFreq);					
@@ -1728,14 +1745,17 @@ public class Features {
 			String nafPath = nafdir+File.separator+trainExamples.get(oId).getsId().replace(':', '_');
 			String taggedFile ="";
 			try {
+				int success=1;
 				if (!FileUtilsElh.checkFile(nafPath+".kaf"))
 				{	
-        			nafPath = NLPpipelineWrapper.tagSentence(corpus.getOpinionSentence(oId), nafPath, corpus.getLang(),  params.getProperty("pos-model"), params.getProperty("lemma-model"), postagger);
+        			success = NLPpipelineWrapper.tagSentence(corpus.getOpinionSentence(oId), nafPath, corpus.getLang(),  params.getProperty("pos-model"), params.getProperty("lemma-model"), postagger);
 				}
-				else
+				
+				if (success !=1 )
 				{
-					nafPath =nafPath+".kaf";
+					trainExamples.remove(oId);
 				}
+				nafPath =nafPath+".kaf";
 				InputStream reader = new FileInputStream(new File(nafPath));
 				taggedFile = IOUtils.toString(reader); 
 				reader.close();				
@@ -3414,9 +3434,9 @@ public class Features {
 		String nafPath = nafDir+File.separator+sId.replace(':', '_');	
 
 		try {
-			String taggedPath = NLPpipelineWrapper.tagSentence(currentSent, nafPath, corpus.getLang(),  params.getProperty("pos-model"), params.getProperty("lemma-model"), postagger);
+			int success = NLPpipelineWrapper.tagSentence(currentSent, nafPath, corpus.getLang(),  params.getProperty("pos-model"), params.getProperty("lemma-model"), postagger);
 			//System.out.println("Features::normalizeAndTag -> "+sId+" document tagging done");		
-			return 1; //success
+			return success; //success
 		} catch (JDOMException e) {
 			System.err.println("Features::normalizeAndTag -> NAF error when tagging sentence");
 			e.printStackTrace();

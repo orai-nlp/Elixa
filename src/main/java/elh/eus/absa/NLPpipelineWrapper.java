@@ -423,13 +423,14 @@ public final class NLPpipelineWrapper {
 				
 				// System.err.println("eustagger succesful? "+success);
 				if (success != 0) {
-					System.err.println("eustaggerCall: ixa-pipe-pos-eu error");
+					System.err.println("eustaggerCall: ixa-pipe-pos-eu error: "+fname);
+					return 0;
 				} else {
 					String tagged = fname + ".kaf";
 					BufferedReader reader = new BufferedReader(new InputStreamReader(eustagger.getInputStream()));
 					
 					Files.copy(eustagger.getInputStream(), Paths.get(tagged));
-					
+					return 1;
 				}
 			}
 			else {
@@ -452,6 +453,7 @@ public final class NLPpipelineWrapper {
 				// System.err.println("eustagger succesful? "+success);
 				if (success != 0) {
 					System.err.println("eustaggerCall: eustagger error");
+					return 0;
 				} else {
 					String tagged = fname + ".kaf";
 					BufferedReader reader = new BufferedReader(new InputStreamReader(eustagger.getInputStream()));
@@ -472,10 +474,10 @@ public final class NLPpipelineWrapper {
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-			return -1;
+			return 0;
 		}
 		
-		return 0;
+		return 1;
 	}
 	
 	
@@ -490,7 +492,7 @@ public final class NLPpipelineWrapper {
 	 * @throws IOException
 	 * @throws JDOMException
 	 */
-	public static String tagSentence(String input, String savePathNoExt, String lang, String posModel, String lemmaModel, eus.ixa.ixa.pipe.pos.Annotate postagger) throws IOException, JDOMException
+	public static int tagSentence(String input, String savePathNoExt, String lang, String posModel, String lemmaModel, eus.ixa.ixa.pipe.pos.Annotate postagger) throws IOException, JDOMException
 	{				
 		KAFDocument kafinst = new KAFDocument("","");
 			
@@ -498,7 +500,7 @@ public final class NLPpipelineWrapper {
 		if (FileUtilsElh.checkFile(savePathNoExt+".kaf"))
 		{
 			//System.err.println("NLPpipelineWrapper::tagSentence : file already there:"+savePathNoExt+".kaf");
-			return savePathNoExt+".kaf";
+			return 1;
 		}
 		
 		/* if language is basque 'posModel' argument can be used to pass the path to the 
@@ -508,13 +510,14 @@ public final class NLPpipelineWrapper {
 		else if (Pattern.compile("(eustagger|euslem|ixa-pipe-pos-eu)", Pattern.CASE_INSENSITIVE).matcher(posModel).find())
 		{
 			int ok =eustaggerCall(posModel, input, savePathNoExt);
+			return ok;
 		}
 		else
 		{
-			kafinst = ixaPipesTokPos(input, lang, posModel, lemmaModel);
+			kafinst = ixaPipesTokPos(input, lang, posModel, postagger);
 			kafinst.save(savePathNoExt+".kaf");										
 		}
-		return savePathNoExt+".kaf";
+		return 1;
 	}
 	
 	

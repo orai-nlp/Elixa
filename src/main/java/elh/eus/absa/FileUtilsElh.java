@@ -75,6 +75,7 @@ public final class FileUtilsElh {
 		else if (!f.canRead()) {
 			isFailure = false;
 		}
+		
 		return isFailure;
 	}
 
