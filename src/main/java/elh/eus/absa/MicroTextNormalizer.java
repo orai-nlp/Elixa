@@ -202,6 +202,7 @@ public class MicroTextNormalizer {
 	 */
 	public String normalizeSentence (String input, boolean url, boolean user, boolean hashtag)
 	{
+		//System.out.println("MicroTextNormalization::normalizeSentence - input: "+input);
 		String out = "";
 		//separate words attached to hashtags and usernames (e.g., hello#world -> hello #world)
 		//String in = input.replaceAll("([^\\s])([@#][\\p{L}\\p{M}\\p{Nd}])", "$1 $2");

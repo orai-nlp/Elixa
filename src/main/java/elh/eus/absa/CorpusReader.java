@@ -300,6 +300,17 @@ public class CorpusReader {
 		sentOps.put(sId, new ArrayList<String>());
 	}
 
+	/**
+	 * Remove a sentence an its opinions from the corpus. 
+	 * WARNING: use this function carefully, as the sentence is not deleted from the review sentence list.
+	 * 
+	 * @param String sId: Id of the sentence to remove.
+	 */
+	public void removeSentence(String sId) {
+		
+		removeSentenceOpinions(sId);
+		sentences.remove(sId);
+	}
 	
 	/**
 	 * @return the sentences

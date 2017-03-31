@@ -404,46 +404,71 @@ public final class NLPpipelineWrapper {
 
 	public static int eustaggerCall(String taggerCommand, String string, String fname) {
 		
+		
 		try {
-			File temp = new File(fname);
-			//System.err.println("eustaggerCall: created temp file: "+temp.getAbsolutePath());
-			BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(
-					new FileOutputStream(temp), "UTF8"));
-			bw.write(string+"\n");
-			bw.close();
-						
-			String[] command = {taggerCommand,temp.getName()};
-			System.err.println("Eustagger agindua: "+Arrays.toString(command));
-				
-			ProcessBuilder eustBuilder = new ProcessBuilder()
-			.command(command);	
-			eustBuilder.directory(new File(temp.getParent()));
-			//.redirectErrorStream(true);
-			Process eustagger = eustBuilder.start();	
-			int success = eustagger.waitFor();			
-			//System.err.println("eustagger succesful? "+success);
-			if (success != 0)
+			if (taggerCommand.contains("ixa-pipe-pos-eu")) 
 			{
-				System.err.println("eustaggerCall: eustagger error");
-			}
-			else
-			{				
-				String tagged = fname+".kaf";
-				BufferedReader reader = new BufferedReader(new InputStreamReader(eustagger.getInputStream()));
-				//new Eustagger_lite outputs to stdout. Also called ixa-pipe-pos-eu
-				if (taggerCommand.contains("eustagger") || taggerCommand.contains("ixa-pipe"))
-				{
+				String[] command = { taggerCommand };
+				System.err.println("ixa-pipe-pos-eu agindua: " + Arrays.toString(command));
+
+				ProcessBuilder eustBuilder = new ProcessBuilder().command(command);				
+				Process eustagger = eustBuilder.start();
+				
+				
+				OutputStreamWriter bw = new OutputStreamWriter(eustagger.getOutputStream());
+				bw.write(string + "\n");
+				bw.close();
+				
+				int success = eustagger.waitFor();
+				
+				// System.err.println("eustagger succesful? "+success);
+				if (success != 0) {
+					System.err.println("eustaggerCall: ixa-pipe-pos-eu error");
+				} else {
+					String tagged = fname + ".kaf";
+					BufferedReader reader = new BufferedReader(new InputStreamReader(eustagger.getInputStream()));
+					
 					Files.copy(eustagger.getInputStream(), Paths.get(tagged));
-				}
-				// old eustagger (euslem)
-				else
-				{
-					FileUtilsElh.renameFile(temp.getAbsolutePath()+".etiketatua3",tagged);
+					
 				}
 			}
-			//
-			// delete all temporal files used in the process.
-			temp.delete();
+			else {
+
+				File temp = new File(fname);
+				// System.err.println("eustaggerCall: created temp file:
+				// "+temp.getAbsolutePath());
+				BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(temp), "UTF8"));
+				bw.write(string + "\n");
+				bw.close();
+
+				String[] command = { taggerCommand, temp.getName() };
+				System.err.println("Eustagger agindua: " + Arrays.toString(command));
+
+				ProcessBuilder eustBuilder = new ProcessBuilder().command(command);
+				eustBuilder.directory(new File(temp.getParent()));
+				// .redirectErrorStream(true);
+				Process eustagger = eustBuilder.start();
+				int success = eustagger.waitFor();
+				// System.err.println("eustagger succesful? "+success);
+				if (success != 0) {
+					System.err.println("eustaggerCall: eustagger error");
+				} else {
+					String tagged = fname + ".kaf";
+					BufferedReader reader = new BufferedReader(new InputStreamReader(eustagger.getInputStream()));
+					// new Eustagger_lite outputs to stdout. Also called
+					// ixa-pipe-pos-eu
+					if (taggerCommand.contains("eustagger") || taggerCommand.contains("ixa-pipe-pos-eu")) {
+						Files.copy(eustagger.getInputStream(), Paths.get(tagged));
+					}
+					// old eustagger (euslem)
+					else {
+						FileUtilsElh.renameFile(temp.getAbsolutePath() + ".etiketatua3", tagged);
+					}
+				}
+				//
+				// delete all temporal files used in the process.
+				temp.delete();
+			}
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -469,7 +494,7 @@ public final class NLPpipelineWrapper {
 	{				
 		KAFDocument kafinst = new KAFDocument("","");
 			
-		System.err.println(posModel);
+		//System.err.println(posModel);
 		if (FileUtilsElh.checkFile(savePathNoExt+".kaf"))
 		{
 			//System.err.println("NLPpipelineWrapper::tagSentence : file already there:"+savePathNoExt+".kaf");

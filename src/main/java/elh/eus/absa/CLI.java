@@ -425,10 +425,10 @@ public class CLI {
 		{
 			traindata = atpTrain.loadInstancesTAB(true, "atp");
 		}
-		else if (corpusFormat.equalsIgnoreCase("tabNotagged") && lang.equalsIgnoreCase("eu"))
-		{
-			traindata = atpTrain.loadInstancesConll(true, "atp");			
-		}
+//		else if (corpusFormat.equalsIgnoreCase("ireom"))
+//		{
+//			traindata = atpTrain.loadInstancesConll(true, "atp");			
+//		}
 		else
 		{
 			//traindata = atpTrain.loadInstancesMod(true, "atp");
@@ -697,15 +697,17 @@ public class CLI {
 		//Read corpus sentences
 		CorpusReader reader = new CorpusReader(inputStream, corpusFormat, lang);
 		
+		Properties params = new Properties();
+		params.load(new FileInputStream(new File(paramFile)));
+
+		String posModelPath = params.getProperty("pos-model");
+		String lemmaModelPath = params.getProperty("lemma-model");
+		String kafDir = params.getProperty("kafDir");
+		
+		
 		//Rule-based Classifier.
 		if (ruleBased) 
 		{		
-			Properties params = new Properties();
-			params.load(new FileInputStream(new File(paramFile)));
-
-			String posModelPath = params.getProperty("pos-model");
-			String lemmaModelPath = params.getProperty("lemma-model");
-			String kafDir = params.getProperty("kafDir");
 			
 			/* polarity lexicon. Domain specific polarity lexicon is given priority.
 			 * If no domain lexicon is found it reverts to general polarity lexicon.
@@ -749,11 +751,7 @@ public class CLI {
 			if (corpusFormat.startsWith("tab") && !corpusFormat.equalsIgnoreCase("tabNotagged"))
 			{
 				traindata = atpTrain.loadInstancesTAB(true, "atp");
-			}
-			else if (lang.equalsIgnoreCase("eu") && (corpusFormat.equalsIgnoreCase("tabNotagged") ||corpusFormat.equalsIgnoreCase("ireom")))
-			{
-				traindata = atpTrain.loadInstancesConll(true, "atp");			
-			}
+			}			
 			else
 			{
 				traindata = atpTrain.loadInstances(true, "atp");

@@ -40,10 +40,14 @@ import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.RecursiveAction;
+import java.util.concurrent.RecursiveTask;
 
 import weka.core.Attribute;
 import weka.core.Instance;
@@ -58,6 +62,7 @@ import java.util.regex.Pattern;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.jdom2.JDOMException;
+import org.jdom2.input.JDOMParseException;
 
 
 
@@ -122,6 +127,78 @@ public class Features {
 	//pattern to match eustagger executable
 	private Pattern eustagger = Pattern.compile("(eustagger|euslem|ixa-pipe-pos-eu)",Pattern.CASE_INSENSITIVE);
 
+	// Fork/join pool for parallel processing
+	private final ForkJoinPool forkJoinPool = new ForkJoinPool();
+	
+	private class myRecursiveNLPtagging extends RecursiveTask<Long> {
+
+	    private Set<String> workLoad = new HashSet<String>();
+	    private String nafPath;
+
+	    public myRecursiveNLPtagging(Set<String> sents, String path) {
+	        this.workLoad = sents;
+	        this.nafPath = path;
+	    }
+
+	    @Override
+	    protected Long compute() {
+	    	
+	    	System.err.println("Computing: " + this.workLoad.size());
+	        //if work is above threshold, break tasks up into smaller tasks
+	        if(this.workLoad.size() > 1000) {
+	            System.err.println("Splitting workLoad : " + this.workLoad.size());
+
+	            List<myRecursiveNLPtagging> subtasks =
+	                new ArrayList<myRecursiveNLPtagging>();
+
+	            subtasks.addAll(createSubtasks());
+
+	            for(myRecursiveNLPtagging subtask : subtasks){
+	                subtask.fork();
+	                //System.err.println("substask finished");
+	            }
+
+	            long result = 0;
+	            for(myRecursiveNLPtagging subtask : subtasks) {
+	                result += subtask.join();
+	            }
+	            return result;
+	            
+	        } else {	        	
+	        	System.err.println("Some tagging done: " + this.workLoad.size());
+	        	long result1 =0;
+	        	for (String key : this.workLoad){
+		        	System.err.println("Tagging doc: " + key);
+	        		result1 += normalizeAndTag(key,this.nafPath);	        		
+	        	}	        
+	        	return result1;
+	        }
+	    }
+
+	    private List<myRecursiveNLPtagging> createSubtasks() {
+	        List<myRecursiveNLPtagging> subtasks =
+	            new ArrayList<myRecursiveNLPtagging>();
+	           
+	        Set<String> subWLoad1 = new HashSet<String>();
+	        Set<String> subWLoad2 = this.workLoad;
+	        Iterator<String> it =subWLoad2.iterator();
+	        for (int i=0; i<(subWLoad2.size()/2); i++){
+	        	subWLoad1.add(it.next());
+	        	it.remove();
+	        }
+	        myRecursiveNLPtagging subtask1 = new myRecursiveNLPtagging(subWLoad1, this.nafPath);
+	        myRecursiveNLPtagging subtask2 = new myRecursiveNLPtagging(subWLoad2, this.nafPath);
+
+	        subtasks.add(subtask1);
+	        subtasks.add(subtask2);
+
+	        return subtasks;
+	    }
+
+	}
+	
+	
+	
 	
 	/**
 	 *  Constructor
@@ -302,7 +379,7 @@ public class Features {
 	 * @param model string: path to the serialized model containing header information
 	 * @throws IOException 
 	 */
-	private void createFeatureSetFromModel (String model) throws IOException
+	private void createFeatureSetFromModel (String model)
 	{
 		try
 		{
@@ -385,7 +462,7 @@ public class Features {
 	 * @throws IOException
 	 */
 	@SuppressWarnings("unchecked")
-	private void createFeatureSet () throws IOException
+	private void createFeatureSet ()
 	{	
 		// create a Id attribute to link the instances to a certain opinion. Note that this attribute won't be
 		// used for classifying. It is used only for linking the instances with their corresponding opinions
@@ -393,9 +470,12 @@ public class Features {
 				
 		//naf paths for the tagged files		
 		String nafDir = params.getProperty("kafDir");
-		// create pos tagging dir if not exists
-		Files.createDirectories(Paths.get(nafDir));
-		
+		try{
+			// create pos tagging dir if not exists
+			Files.createDirectories(Paths.get(nafDir));
+		}catch(IOException ioe){
+			System.err.println("Features::CreateFeatureSet error when creating pos tagging folder "+nafDir);
+		}
 		
 		// dummy variable to debug the feature loading
 		int featPos = this.featNum;
@@ -427,34 +507,38 @@ public class Features {
         		{
         			Properties posProp = NLPpipelineWrapper.setPostaggerProperties( params.getProperty("pos-model"), params.getProperty("lemma-model"),
         					corpus.getLang(), "false", "false");					
-        			postagger = new eus.ixa.ixa.pipe.pos.Annotate(posProp);
+        			try {
+						postagger = new eus.ixa.ixa.pipe.pos.Annotate(posProp);
+					} catch (IOException e) {						
+						e.printStackTrace();
+						System.err.println("Features::CreateFeatureSet error creating ixa-pipe postagger object, execution aborted.");
+						System.exit(1);
+					}
         		}
         	}
 
         	
+        	
         	long startTime = System.currentTimeMillis();
+
+        	long tagged = 0;
+//OLD IMPLEMENTATION SEQUENTIAL NORMALIZATION AND POS TAGGING        	
         	for (String key : corpSentenceIds)
         	{
-        		String currentSent = corpus.getSentence(key);		
-        		if ((params.containsKey("wfngrams") || params.containsKey("lemmaNgrams")) &&
-        				(! params.getProperty("normalization", "none").equalsIgnoreCase("noEmot")))
-        		{
-        			currentSent = normalize(currentSent, params.getProperty("normalization", "none"));
-        		}
-
-        		String nafPath = nafDir+File.separator+key.replace(':', '_');	
-
-        		try {
-        			String taggedPath = NLPpipelineWrapper.tagSentence(currentSent, nafPath, corpus.getLang(),  params.getProperty("pos-model"), params.getProperty("lemma-model"), postagger);
-        		} catch (JDOMException e) {
-        			System.err.println("Features::createFeatureSet -> NAF error when tagging sentence");
-        			e.printStackTrace();
-        		}
-        		//System.err.println("Features::createFeatureSet -> corpus normalization step done");						
+        		tagged+=normalizeAndTag(key,nafDir);        								
         	}
+        	
+//        	myRecursiveNLPtagging parallelTagging = new myRecursiveNLPtagging(corpSentenceIds, nafDir);
+        	
+//        	try{
+//        		tagged = forkJoinPool.invoke(parallelTagging);
+//        	}finally{
+//        		forkJoinPool.shutdown();
+//        	}
+        	
         	long endTime = System.currentTimeMillis();
         	System.err.println("Features::createFeatureSet() - sentence normalization and tagging done: "
-        			+(double)(endTime-startTime)/1000 + " seconds");
+        			+(double)(endTime-startTime)/1000 + " seconds, "+tagged+" sentences tagged");
         }
 		// word form ngram features
 		if (params.containsKey("wfngrams"))
@@ -493,16 +577,21 @@ public class Features {
 				{
 					String nafPath = nafDir+File.separator+key.replace(':', '_')+".kaf";
 					//eu tagged files are conll format
-					if (corpus.getLang().equalsIgnoreCase("eu"))
-					{
-						int success = extractNgramsTABString(new FileInputStream(new File(nafPath)), wfNgramsLength, "wf", discardPos, true);
-					}
-					else
-					{
+					//if (corpus.getLang().equalsIgnoreCase("eu"))
+					//{
+					//	int success = extractNgramsTABString(new FileInputStream(new File(nafPath)), wfNgramsLength, "wf", discardPos, true);
+					//}
+					//else
+					//{
+					try {
 						KAFDocument naf = KAFDocument.createFromFile(new File(nafPath));
 						// N-gram Feature vector : extracted from sentences
-						int success = extractWfNgramsKAF(Integer.valueOf(params.getProperty("wfngrams")), naf, true);			
-					}	
+						int success = extractWfNgramsKAF(Integer.valueOf(params.getProperty("wfngrams")), naf, true);
+					} catch (IOException ioe){
+						System.err.println("Features::createFeatureSet -> error when reading naf for sentence "+key+" sentence will be deleted from training set");
+						corpus.removeSentence(key);
+					}										
+					//}	
 				}
 				addNumericFeatureSet("", wfNgrams, wfMinFreq);
 			}
@@ -549,16 +638,21 @@ public class Features {
 				{
 					String nafPath = nafDir+File.separator+key.replace(':', '_')+".kaf";
 					//eu tagged files are conll format
-					if (corpus.getLang().equalsIgnoreCase("eu"))
-					{
-						int success = extractNgramsTABString(new FileInputStream(new File(nafPath)), lemmaNgramsLength, "lemma", discardPos, true);
-					}
-					else
-					{
-						KAFDocument naf = KAFDocument.createFromFile(new File(nafPath));
-						// N-gram Feature vector : extracted from sentences
-						int success = extractLemmaNgrams(Integer.valueOf(params.getProperty("lemmaNgrams")), naf, discardPos, true);
-					}
+//					if (corpus.getLang().equalsIgnoreCase("eu"))
+//					{
+//						int success = extractNgramsTABString(new FileInputStream(new File(nafPath)), lemmaNgramsLength, "lemma", discardPos, true);
+//					}
+//					else
+//					{
+						try {
+							KAFDocument naf = KAFDocument.createFromFile(new File(nafPath));
+							// N-gram Feature vector : extracted from sentences
+							int success = extractLemmaNgrams(Integer.valueOf(params.getProperty("lemmaNgrams")), naf, discardPos, true);
+						} catch (IOException je){
+							System.err.println("Features::createFeatureSet -> error when reading naf for sentence "+key+" sentence will be deleted from training set");
+							corpus.removeSentence(key);
+						}						
+					//}
 				} 			
 				addNumericFeatureSet("", lemmaNgrams, lemmaMinFreq);					
 			}
@@ -592,17 +686,22 @@ public class Features {
 				for (String key : corpSentenceIds)
 				{
 					String nafPath = nafDir+File.separator+key.replace(':', '_')+".kaf";
-					//eu tagged files are conll format
-					if (corpus.getLang().equalsIgnoreCase("eu"))
-					{
-						int success = extractNgramsTABString(new FileInputStream(new File(nafPath)), posNgramLength, "pos", discardPos, true);
-					}
-					else
-					{
+//					//eu tagged files are conll format
+//					if (corpus.getLang().equalsIgnoreCase("eu"))
+//					{
+//						int success = extractNgramsTABString(new FileInputStream(new File(nafPath)), posNgramLength, "pos", discardPos, true);
+//					}
+//					else
+//					{
+					try {
 						KAFDocument naf = KAFDocument.createFromFile(new File(nafPath));
 						// N-gram Feature vector : extracted from sentences
 						int success = extractPosNgrams(Integer.valueOf(params.getProperty("pos")), naf, discardPos, true);
+					} catch (IOException ioe){
+						System.err.println("Features::createFeatureSet -> error when reading naf for sentence "+key+" sentence will be deleted from training set");
+						corpus.removeSentence(key);
 					}
+					//}
 					
 				} 							
 				addNumericFeatureSet("", POSNgrams, 1);
@@ -751,7 +850,8 @@ public class Features {
 	}
 	
 		
-	private void loadClusterFeatures (String clname) throws IOException{
+	private void loadClusterFeatures (String clname) 
+	{
 		// Load clark cluster category info from files
 		HashMap<String, Integer> clMap = new HashMap<String, Integer>();
 		if (params.containsKey("clark"))
@@ -839,14 +939,6 @@ public class Features {
 				values[rsltdata.attribute("upperCaseRation").index()] = upRatio;
 			}
 			
-			// string normalization (emoticons, twitter grammar,...)
-			if ((params.containsKey("wfngrams") || params.containsKey("lemmaNgrams")) &&
-						(! params.getProperty("normalization", "none").equalsIgnoreCase("noEmot")))
-			{
-				opNormalized = normalize(opNormalized, params.getProperty("normalization", "none"));
-			}
-			
-			
 			//process the current instance with the NLP pipeline in order to get token and lemma|pos features
 			KAFDocument nafinst = new KAFDocument("","");
 			String nafname = trainExamples.get(oId).getsId().replace(':', '_');
@@ -864,11 +956,22 @@ public class Features {
 					    //String cleanKAF = FileUtilsElh.stripNonValidXMLCharacters(FileUtils.readFileToString(nafFile));
 					    //FileUtils.deleteQuietly(nafFile);
 					    //FileUtils.writeStringToFile(nafFile,cleanKAF);
-					    nafinst = KAFDocument.createFromFile(new File(nafPath));						
+						try {
+							nafinst = KAFDocument.createFromFile(new File(nafPath));
+						} catch (IOException ioe){
+							System.err.println("Features::createFeatureSet -> error when reading naf for opinion "+oId+" opinion will be deleted from training set");
+							trainExamples.remove(oId);
+						}						
 					}
 					else
 					{
 						Files.createDirectories(Paths.get(nafDir));
+						// string normalization (emoticons, twitter grammar,...)
+						if ((params.containsKey("wfngrams") || params.containsKey("lemmaNgrams")) &&
+									(! params.getProperty("normalization", "none").equalsIgnoreCase("noEmot")))
+						{
+							opNormalized = normalize(opNormalized, params.getProperty("normalization", "none"));
+						}				
 						nafinst = NLPpipelineWrapper.ixaPipesTokPos(opNormalized, corpus.getLang(),  params.getProperty("pos-model"), postagger);												
 						nafinst.save(nafPath);
 						
@@ -885,10 +988,21 @@ public class Features {
 					    //String cleanKAF = FileUtilsElh.stripNonValidXMLCharacters(FileUtils.readFileToString(nafFile));
 					    //FileUtils.deleteQuietly(nafFile);
 					    //FileUtils.writeStringToFile(nafFile,cleanKAF);
-					    nafinst = KAFDocument.createFromFile(new File(nafPath));
+						try {
+							nafinst = KAFDocument.createFromFile(new File(nafPath));
+						} catch (IOException ioe){
+							System.err.println("Features::createFeatureSet -> error when reading naf for opinion "+oId+" opinion will be deleted from training set");
+							trainExamples.remove(oId);
+						}
 					}
 					else
 					{
+						// string normalization (emoticons, twitter grammar,...)
+						if ((params.containsKey("wfngrams") || params.containsKey("lemmaNgrams")) &&
+									(! params.getProperty("normalization", "none").equalsIgnoreCase("noEmot")))
+						{
+							opNormalized = normalize(opNormalized, params.getProperty("normalization", "none"));
+						}						
 						nafinst = NLPpipelineWrapper.ixaPipesTok(opNormalized,corpus.getLang());						
 					}
 					tokNum = nafinst.getWFs().size();
@@ -2613,12 +2727,13 @@ public class Features {
 	 * 
 	 * @throws IOException if the given file give reading problems.
 	 */
-	private HashMap<String, Integer> loadAttributeMapFromFile(String fname, String attName) 
-			throws IOException
+	private HashMap<String, Integer> loadAttributeMapFromFile(String fname, String attName) 			
 	{
 		HashMap<String, Integer> result = new HashMap<String, Integer>();
 		TreeSet<Integer> valueSet = new TreeSet<Integer>();
 		
+		try {
+			
 		if (FileUtilsElh.checkFile(fname))
 		{
 			BufferedReader breader = new BufferedReader(new FileReader(fname));
@@ -2644,6 +2759,9 @@ public class Features {
 			addNumericFeatureSet(attName, valueSet);
 		}			
 
+		}catch(IOException ioe){
+			System.err.println("Features::loadAttributeMapFromFile error when reading the file "+fname);
+		}
 		return result;
 	}
 
@@ -2747,10 +2865,11 @@ public class Features {
 	 * @throws IOException if the given file give reading problems.
 	 */
 	private TreeSet<String> loadAttributeListFromFile(File fname, String attName) 
-			throws IOException
+			
 	{		
 		TreeSet<String> valueSet = new TreeSet<String>();
 		
+		try {
 		if (FileUtilsElh.checkFile(fname))
 		{
 			BufferedReader breader = new BufferedReader(new FileReader(fname));
@@ -2770,7 +2889,10 @@ public class Features {
 				}
 			}
 			breader.close();			
-		}			
+		}
+		}catch (IOException ioe){
+			System.err.println("Features::loadAttributeListFromFile error when reading the file "+fname);
+		}
 		return valueSet;
 	}
 	
@@ -3266,5 +3388,43 @@ public class Features {
 		System.err.println("Features::setStopwords - stopword list loaded: "+stopwords.size());	
 	}
 
+	/**
+	 * Function o normalize and tag a sentence (normalization is only done if so selected) 
+	 * @param sentence
+	 */
+	private long normalizeAndTag (String sId, String nafDir)
+	{
+		String currentSent=corpus.getSentence(sId);
+		
+		if (currentSent == null)
+		{
+			return 0;
+		}
+
+		//System.out.println("Features::normalizeAndTag -> "+sId+" document tagging start "+currentSent);		
+
+		if ((params.containsKey("wfngrams") || params.containsKey("lemmaNgrams")) &&
+				(! params.getProperty("normalization", "none").equalsIgnoreCase("noEmot")))
+		{
+			currentSent = normalize(currentSent, params.getProperty("normalization", "none"));
+		}
+
+		//System.out.println("Features::normalizeAndTag -> "+sId+" document normalized");		
+
+		String nafPath = nafDir+File.separator+sId.replace(':', '_');	
+
+		try {
+			String taggedPath = NLPpipelineWrapper.tagSentence(currentSent, nafPath, corpus.getLang(),  params.getProperty("pos-model"), params.getProperty("lemma-model"), postagger);
+			//System.out.println("Features::normalizeAndTag -> "+sId+" document tagging done");		
+			return 1; //success
+		} catch (JDOMException e) {
+			System.err.println("Features::normalizeAndTag -> NAF error when tagging sentence");
+			e.printStackTrace();
+		} catch (IOException ioe){
+			System.err.println("Features::normalizeAndTag -> Error when writing a tagged sentence");
+			ioe.printStackTrace();
+		}
+		return 0; //failure
+	}
 	
 }
