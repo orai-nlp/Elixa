@@ -417,18 +417,21 @@ public class CLI {
 		int foldNum = Integer.parseInt(parsedArguments.getString("foldNum"));
 		//boolean printPreds = parsedArguments.getBoolean("printPreds");
 		
+		Properties params = new Properties();			
+		params.load(new FileInputStream(paramFile));
+		
 		CorpusReader reader = new CorpusReader(inputStream, corpusFormat, lang);
 		System.err.println("trainATP : Corpus read, creating features");
 		Features atpTrain = new Features (reader, paramFile, classes);			
 		Instances traindata;
 		if (corpusFormat.startsWith("tab") && !corpusFormat.equalsIgnoreCase("tabNotagged"))
 		{
-			traindata = atpTrain.loadInstancesTAB(true, "atp");
+			traindata = atpTrain.loadInstancesConll(true, "atp",false);
 		}
-//		else if (corpusFormat.equalsIgnoreCase("ireom"))
-//		{
-//			traindata = atpTrain.loadInstancesConll(true, "atp");			
-//		}
+		else if (lang.equalsIgnoreCase("eu") && params.getProperty("pos-model").contains("eustagger"))
+		{
+			traindata = atpTrain.loadInstancesConll(true, "atp",true);			
+		}
 		else
 		{
 			//traindata = atpTrain.loadInstancesMod(true, "atp");
@@ -438,9 +441,7 @@ public class CLI {
 		//setting class attribute (entCat|attCat|entAttCat|polarityCat)
 		traindata.setClass(traindata.attribute("polarityCat"));		
 		WekaWrapper classify;
-		try {
-			Properties params = new Properties();			
-			params.load(new FileInputStream(paramFile));
+		try {			
 			String modelPath = params.getProperty("fVectorDir");
 			classify = new WekaWrapper(traindata, true);
 			classify.saveModel(modelPath+File.separator+"elixa-atp_"+lang+".model");			
@@ -523,16 +524,16 @@ public class CLI {
 		//Read corpus sentences
 		CorpusReader reader = new CorpusReader(inputStream, corpusFormat, lang);
 		
- 
+		Properties params = new Properties();
+		params.load(new FileInputStream(new File(paramFile)));
+
+		String posModelPath = params.getProperty("pos-model");
+		String lemmaModelPath = params.getProperty("lemma-model");
+		String kafDir = params.getProperty("kafDir");
+		
 		//Rule-based Classifier.
 		if (ruleBased) 
 		{		
-			Properties params = new Properties();
-			params.load(new FileInputStream(new File(paramFile)));
-
-			String posModelPath = params.getProperty("pos-model");
-			String lemmaModelPath = params.getProperty("lemma-model");
-			String kafDir = params.getProperty("kafDir");
 			
 			/* polarity lexicon. Domain specific polarity lexicon is given priority.
 			 * If no domain lexicon is found it reverts to general polarity lexicon.
@@ -576,8 +577,13 @@ public class CLI {
 			Instances testdata;
 			if (corpusFormat.startsWith("tab") && !corpusFormat.equalsIgnoreCase("tabNotagged"))
 			{	
-				testdata = atpTest.loadInstancesTAB(true, "atp");
+				testdata = atpTest.loadInstancesConll(true, "atp",false);
 			}
+			else if (lang.equalsIgnoreCase("eu") && posModelPath.contains("eustagger"))
+			{
+				testdata = atpTest.loadInstancesConll(true, "atp",true);
+			}
+			
 			else
 			{	
 				testdata = atpTest.loadInstances(true, "atp");
@@ -750,8 +756,12 @@ public class CLI {
 			Instances traindata;
 			if (corpusFormat.startsWith("tab") && !corpusFormat.equalsIgnoreCase("tabNotagged"))
 			{
-				traindata = atpTrain.loadInstancesTAB(true, "atp");
-			}			
+				traindata = atpTrain.loadInstancesConll(true, "atp",false);
+			}	
+			else if (lang.equalsIgnoreCase("eu") && posModelPath.contains("eustagger"))
+			{
+				traindata = atpTrain.loadInstancesConll(true, "atp",true);
+			}
 			else
 			{
 				traindata = atpTrain.loadInstances(true, "atp");

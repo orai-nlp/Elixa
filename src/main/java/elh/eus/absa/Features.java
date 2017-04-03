@@ -43,6 +43,8 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ForkJoinPool;
@@ -521,13 +523,16 @@ public class Features {
 
         	long tagged = 0;
 //OLD IMPLEMENTATION SEQUENTIAL NORMALIZATION AND POS TAGGING        	
-        	for (String key : corpSentenceIds)
-        	{
-        		long success = normalizeAndTag(key,nafDir);
+        	for (Iterator<Entry<String, String>> it = corpus.getSentences().entrySet().iterator(); it.hasNext();)
+    		{									
+    			Map.Entry<String, String> sntnc = it.next();
+    			String sId = sntnc.getKey();
+        	
+        		long success = normalizeAndTag(sId,nafDir);
         		if (success == 0)
         		{
-        			corpus.removeSentenceOpinions(key);
-        			corpus.removeSentence(key);
+        			it.remove();
+        		//	corpus.removeSentence(key);
         		}
         		else
         		{
@@ -579,6 +584,7 @@ public class Features {
 			else
 			{
 				int wfNgramsLength=Integer.valueOf(params.getProperty("wfngrams"));
+				int tagFails=0;
 				System.err.println("Features::createFeatureSet -> word from ngram extraction ("+wfNgramsLength+")-grams)...");
 				for (String key : corpSentenceIds)
 				{
@@ -595,8 +601,9 @@ public class Features {
 						// N-gram Feature vector : extracted from sentences
 						int success = extractWfNgramsKAF(Integer.valueOf(params.getProperty("wfngrams")), naf, true);
 					} catch (IOException ioe){
-						System.err.println("Features::createFeatureSet -> error when reading naf for sentence "+key+" sentence will be deleted from training set");
-						corpus.removeSentence(key);
+						System.err.println("Features::createFeatureSet -> error when reading naf for sentence "+key+" opinions for the sentence will be deleted from training set");
+						corpus.removeSentenceOpinions(key);
+						tagFails++;
 					}										
 					//}	
 				}
@@ -641,6 +648,7 @@ public class Features {
 			{
 				int lemmaNgramsLength=Integer.valueOf(params.getProperty("lemmaNgrams"));
 				System.err.println("Features::createFeatureSet -> lemma ngram extraction ("+lemmaNgramsLength+"-grams)...");
+				int tagFails = 0;
 				for (String key : corpSentenceIds)
 				{
 					String nafPath = nafDir+File.separator+key.replace(':', '_')+".kaf";
@@ -653,8 +661,9 @@ public class Features {
 //					{
 					File naffile = new File(nafPath);
 					if (naffile.length()==0){
-						System.err.println("Features::createFeatureSet -> naf file is empty for sentence "+key+" sentence will be deleted from training set");
-						corpus.removeSentence(key);
+						System.err.println("Features::createFeatureSet -> naf file is empty, sentence "+key+" opinions for the sentence will be deleted from training set");
+						corpus.removeSentenceOpinions(key);
+						tagFails++;
 					}
 					else
 					{
@@ -664,9 +673,10 @@ public class Features {
 							// N-gram Feature vector : extracted from sentences
 							int success = extractLemmaNgrams(Integer.valueOf(params.getProperty("lemmaNgrams")), naf, discardPos, true);
 						} catch (IOException e) {
-							System.err.println("Features::createFeatureSet -> error when reading naf for sentence "+key+" sentence will be deleted from training set");
-							e.printStackTrace();
-							corpus.removeSentence(key);
+							System.err.println("Features::createFeatureSet -> error when reading naf for sentence "+key+" opinions for the sentence will be deleted from training set");
+							e.printStackTrace();							
+							corpus.removeSentenceOpinions(key);
+							tagFails++;
 						}
 					} 
 					//}
@@ -699,6 +709,7 @@ public class Features {
 			else
 			{
 				int posNgramLength= Integer.valueOf(params.getProperty("pos"));
+				int tagFails=0;
 				System.err.println("Features::createFeatureSet -> pos ngram extraction ("+posNgramLength+"-grams)...");
 				for (String key : corpSentenceIds)
 				{
@@ -710,16 +721,25 @@ public class Features {
 //					}
 //					else
 //					{
-					try {
-						KAFDocument naf = KAFDocument.createFromFile(new File(nafPath));
-						// N-gram Feature vector : extracted from sentences
-						int success = extractPosNgrams(Integer.valueOf(params.getProperty("pos")), naf, discardPos, true);
-					} catch (IOException ioe){
-						System.err.println("Features::createFeatureSet -> error when reading naf for sentence "+key+" sentence will be deleted from training set");
-						corpus.removeSentence(key);
+					File nafFile = new File(nafPath);
+					if (nafFile.length()==0)
+					{
+						corpus.removeSentenceOpinions(key);
+						tagFails++;
 					}
-					//}
-					
+					else
+					{
+						try {
+							KAFDocument naf = KAFDocument.createFromFile(nafFile);
+							// N-gram Feature vector : extracted from sentences
+							int success = extractPosNgrams(Integer.valueOf(params.getProperty("pos")), naf, discardPos, true);
+						} catch (IOException ioe){
+							System.err.println("Features::createFeatureSet -> error when reading naf for sentence "+key+" opinions for the sentence will be deleted from training set");
+							corpus.removeSentenceOpinions(key);
+							tagFails++;
+						}
+					}
+					//}					
 				} 							
 				addNumericFeatureSet("", POSNgrams, 1);
 			}
@@ -911,15 +931,25 @@ public class Features {
 			savePath = savePath+"_w"+bowWin;		
 		}
 		
-		//Properties posProp = new Properties();
-		//eus.ixa.ixa.pipe.pos.Annotate postagger = new eus.ixa.ixa.pipe.pos.Annotate(posProp);		
-		if (params.containsKey("lemmaNgrams"))
-		{
-			Properties posProp = NLPpipelineWrapper.setPostaggerProperties( params.getProperty("pos-model"), params.getProperty("lemma-model"),
-					corpus.getLang(), "false", "false");
-			
-			postagger = new eus.ixa.ixa.pipe.pos.Annotate(posProp);						
-		}
+		//Corpus tagging, if the corpus is not in conll tabulated format
+        if (corpus.getFormat().equalsIgnoreCase("tabNotagged") || !corpus.getFormat().startsWith("tab"))
+        {
+        	if ((params.containsKey("lemmaNgrams") || (params.containsKey("pos") && !params.getProperty("pos").equalsIgnoreCase("0"))))
+        	{
+        		if (!eustagger.matcher(params.getProperty("pos-model")).find())
+        		{
+        			Properties posProp = NLPpipelineWrapper.setPostaggerProperties( params.getProperty("pos-model"), params.getProperty("lemma-model"),
+        					corpus.getLang(), "false", "false");					
+        			try {
+						postagger = new eus.ixa.ixa.pipe.pos.Annotate(posProp);
+					} catch (IOException e) {						
+						e.printStackTrace();
+						System.err.println("Features::loadInstances error creating ixa-pipe postagger object, execution aborted.");
+						System.exit(1);
+					}
+        		}
+        	}
+        }
 		
 		//System.out.println("train examples: "+trainExamplesNum);
 		//Create the Weka object for the training set
@@ -933,8 +963,10 @@ public class Features {
 		
 		int instId = 1;
 		// fill the vectors for each training example
-		for (String oId : trainExamples.keySet())
+		for (Iterator<Entry<String, Opinion>> it = trainExamples.entrySet().iterator(); it.hasNext();)
 		{									
+			Map.Entry<String, Opinion> op = it.next();
+			String oId = op.getKey();
 			//System.err.println("sentence: "+ corpus.getOpinionSentence(o.getId()));
 			
 			//value vector
@@ -963,76 +995,52 @@ public class Features {
 			String nafPath = nafDir+File.separator+nafname+".kaf";			
 			//counter for opinion sentence token number. Used for computing relative values of the features
 			int tokNum=1;
-			try {
-				if (params.containsKey("lemmaNgrams")) //(lemmaNgrams != null) && (!lemmaNgrams.isEmpty()))
-				{						
-					if (FileUtilsElh.checkFile(nafPath))
-					{
-						// can not use directly KAFDocument.createFromFile because a kaflib bug (non valid xml chars are inserted in comments.)
-					    //File nafFile = new File(nafPath);
-					    //String cleanKAF = FileUtilsElh.stripNonValidXMLCharacters(FileUtils.readFileToString(nafFile));
-					    //FileUtils.deleteQuietly(nafFile);
-					    //FileUtils.writeStringToFile(nafFile,cleanKAF);
-						try {
-							nafinst = KAFDocument.createFromFile(new File(nafPath));
-						} catch (IOException ioe){
-							System.err.println("Features::createFeatureSet -> error when reading naf for opinion "+oId+" opinion will be deleted from training set");
-							trainExamples.remove(oId);
-						}						
-					}
-					else
-					{
-						Files.createDirectories(Paths.get(nafDir));
-						// string normalization (emoticons, twitter grammar,...)
-						if ((params.containsKey("wfngrams") || params.containsKey("lemmaNgrams")) &&
-									(! params.getProperty("normalization", "none").equalsIgnoreCase("noEmot")))
-						{
-							opNormalized = normalize(opNormalized, params.getProperty("normalization", "none"));
-						}				
-						nafinst = NLPpipelineWrapper.ixaPipesTokPos(opNormalized, corpus.getLang(),  params.getProperty("pos-model"), postagger);												
-						nafinst.save(nafPath);
-						
-					}
-					tokNum = nafinst.getWFs().size();
-					//System.err.println("Features::loadInstances - postagging opinion sentence ("+oId+") - "+corpus.getOpinionSentence(oId));
-				}
-				else
-				{
-					if (FileUtilsElh.checkFile(nafPath))
-					{
-						// can not use directly KAFDocument.createFromFile because a kaflib bug (non valid xml chars are inserted in comments.)												
-						//File nafFile = new File(nafPath);
-					    //String cleanKAF = FileUtilsElh.stripNonValidXMLCharacters(FileUtils.readFileToString(nafFile));
-					    //FileUtils.deleteQuietly(nafFile);
-					    //FileUtils.writeStringToFile(nafFile,cleanKAF);
-						try {
-							nafinst = KAFDocument.createFromFile(new File(nafPath));
-						} catch (IOException ioe){
-							System.err.println("Features::createFeatureSet -> error when reading naf for opinion "+oId+" opinion will be deleted from training set");
-							trainExamples.remove(oId);
-						}
-					}
-					else
-					{
-						// string normalization (emoticons, twitter grammar,...)
-						if ((params.containsKey("wfngrams") || params.containsKey("lemmaNgrams")) &&
-									(! params.getProperty("normalization", "none").equalsIgnoreCase("noEmot")))
-						{
-							opNormalized = normalize(opNormalized, params.getProperty("normalization", "none"));
-						}						
-						nafinst = NLPpipelineWrapper.ixaPipesTok(opNormalized,corpus.getLang());						
-					}
-					tokNum = nafinst.getWFs().size();
-					System.err.println("Features::loadInstances - tokenizing opinion sentence ("+oId+") - "+corpus.getOpinionSentence(oId));
-
-				}
-			} catch (IOException | JDOMException e) {
-				System.err.println("Features::loadInstances() - error when NLP processing the instance "+instId+"|"+oId+
-						") for filling the attribute vector");
-				e.printStackTrace();
-				System.exit(5);
-			}
+			int tagFails=0;
 			
+			/* document tagging 
+			 * UPDATE 2017/04/03: tokenizing and pos tagging are unified, postagging is always done. 
+			 * Although this is more costly when not using lemmas, this is done for simplyfing the code 
+			 * due to the use of various taggers for basque.  
+			 * 
+			 */
+			if (params.containsKey("lemmaNgrams")) // (lemmaNgrams != null) &&
+													// (!lemmaNgrams.isEmpty()))
+			{
+				if (!FileUtilsElh.checkFile(nafPath)) {
+					long success = normalizeAndTag(corpus.getOpinionSentence(oId), nafDir);
+					if (success == 0) {
+						it.remove();
+						System.err.println("error when tagging opinion " + oId
+								+ ". Opinion removed from training set, features can not be extracted.");
+						continue;
+					}
+				}
+
+				// can not use directly KAFDocument.createFromFile because if
+				// file exist but is empty kaflib end in Exception.
+				File nafFile = new File(nafPath);
+				if (nafFile.length() == 0) {
+					it.remove();
+					System.err.println("error when tagging opinion " + oId
+							+ ". Opinion removed from training set, features can not be extracted.");
+					continue;
+				} else {
+					try {
+						nafinst = KAFDocument.createFromFile(new File(nafPath));
+					} catch (IOException ioe) {
+						System.err.println("Features::createFeatureSet -> error when reading naf for opinion " + oId
+								+ " opinion will be deleted from training set");
+						it.remove();
+						tagFails++;
+						continue;
+					}
+				}
+				tokNum = nafinst.getWFs().size();
+				// System.err.println("Features::loadInstances - postagging
+				// opinion sentence ("+oId+") -
+				// "+corpus.getOpinionSentence(oId));
+			}
+
 			LinkedList<String> ngrams = new LinkedList<String>();
 			int ngramDim;
 			try {
@@ -1328,358 +1336,6 @@ public class Features {
 		return rsltdata;
 	}
 	
-	
-	
-	/**
-	 *   Function fills the attribute vectors for the instances existing in the Conll tabulated formatted corpus given. 
-	 *   Attribute vectors contain the features loaded by the creatFeatureSet() function.
-	 * 
-	 * @param boolean save : whether the Instances file should be saved to an arff file or not.
-	 * @return Weka Instances object containing the attribute vectors filled with the features specified
-	 * 			in the parameter file.
-	 */
-	public Instances loadInstancesTAB (boolean save, String prefix)
-	{
-		String savePath = params.getProperty("fVectorDir")+File.separator+"arff"+File.separator+"train_"+prefix;
-		HashMap<String, Opinion> trainExamples = corpus.getOpinions();
-				
-		int trainExamplesNum = trainExamples.size();
-
-		int bowWin=0;
-		if (params.containsKey("window"))
-		{
-			bowWin = Integer.parseInt(params.getProperty("window"));
-			savePath = savePath+"_w"+bowWin;		
-		}
-		
-		//System.out.println("train examples: "+trainExamplesNum);
-		//Create the Weka object for the training set
-        Instances rsltdata = new Instances("train", atts, trainExamplesNum);
-        
-        // setting class attribute (last attribute in train data.
-        //traindata.setClassIndex(traindata.numAttributes() - 1);
-		
-		System.err.println("Features: loadInstancesTAB() - featNum: "+this.featNum+" - trainset attrib num -> "+rsltdata.numAttributes()+" - ");
-		System.out.println("Features: loadInstancesTAB() - featNum: "+this.featNum+" - trainset attrib num -> "+rsltdata.numAttributes()+" - ");
-				
-		int instId = 1;
-		// fill the vectors for each training example
-		for (String oId : trainExamples.keySet())
-		{									
-			//System.err.println("sentence: "+ corpus.getOpinionSentence(o.getId()));
-			
-			//value vector
-			double[] values = new double[featNum];
-			
-			// first element is the instanceId			
-			values[rsltdata.attribute("instanceId").index()] = instId;  
-			
-			
-			
-			LinkedList<String> ngrams = new LinkedList<String>();
-			int ngramDim;
-			try {
-				ngramDim = Integer.valueOf(params.getProperty("wfngrams"));			
-			} catch (Exception e){
-				ngramDim = 0;
-			}
-			
-			boolean polNgrams=false;
-			if (params.containsKey("polNgrams"))
-			{
-				polNgrams=params.getProperty("polNgrams").equalsIgnoreCase("yes");
-			}
-			
-			
-			String[] noWindow = corpus.getOpinionSentence(oId).split("\n");
-			
-			//counter for opinion sentence token number. Used for computing relative values of the features
-			int tokNum=noWindow.length;
-			
-			List<String> window = Arrays.asList(noWindow); 
-			Integer end = corpus.getOpinion(oId).getTo();		
-			// apply window if window active (>0) and if the target is not null (to=0)
-			if ((bowWin > 0) && (end > 0))
-			{
-				Integer start = corpus.getOpinion(oId).getFrom();
-				Integer from = start - bowWin;
-				if (from < 0)
-				{
-					from = 0;
-				}
-				Integer to = end+bowWin;
-				if (to > noWindow.length-1)
-				{
-					to = noWindow.length-1;
-				}
-				window = Arrays.asList(Arrays.copyOfRange(noWindow, from, to));
-			}
-			
-			//System.out.println("Sentence: "+corpus.getOpinionSentence(oId)+" - target: "+corpus.getOpinion(oId).getTarget()+
-			//		"\n window: from-> "+window.get(0).getForm()+" to-> "+window.get(window.size()-1)+" .\n");
-			
-			//System.err.println(Arrays.toString(window.toArray()));
-			
-			// word form ngram related features
-			for (String wf : window)
-			{					
-				String[] fields = wf.split("\t"); 
-				String wfStr = normalize(fields[0], params.getProperty("normalization", "none"));
-				// blank line means we found a sentence end. Empty n-gram list and reiniciate.  
-				if (wf.equals(""))
-				{
-					// add ngrams to the feature vector
-					checkNgramFeatures(ngrams, values, "", 1, true); //toknum
-					
-					// since wf is empty no need to check for clusters and other features.
-					continue;
-				}
-				
-				
-				if (params.containsKey("wfngrams") && ngramDim > 0)
-				{
-					if (! savePath.contains("_wf"+ngramDim))
-					{
-						savePath = savePath+"_wf"+ngramDim;
-					}
-					//if the current word form is in the ngram list activate the feature in the vector
-					if (ngrams.size() >= ngramDim)
-					{
-						ngrams.removeFirst();
-					}
-					ngrams.add(wfStr);
-
-					// add ngrams to the feature vector
-					checkNgramFeatures(ngrams, values, "", 1, false); //toknum
-				}
-				// Clark cluster info corresponding to the current word form
-				if (params.containsKey("clark") && attributeSets.get("ClarkCl").containsKey(wfStr))
-				{
-					if (! savePath.contains("_cl"))
-					{
-						savePath = savePath+"_cl";
-					}
-					values[rsltdata.attribute("ClarkClId_"+attributeSets.get("ClarkCl").get(wfStr)).index()]++;					
-				}
-				
-				// Clark cluster info corresponding to the current word form
-				if (params.containsKey("brown") && attributeSets.get("BrownCl").containsKey(wfStr))
-				{
-					if (! savePath.contains("_br"))
-					{
-						savePath = savePath+"_br";
-					}
-					values[rsltdata.attribute("BrownClId_"+attributeSets.get("BrownCl").get(wfStr)).index()]++;
-				}
-				
-				// Clark cluster info corresponding to the current word form
-				if (params.containsKey("word2vec") && attributeSets.get("w2vCl").containsKey(wfStr))
-				{
-					if (! savePath.contains("_w2v"))
-					{
-						savePath = savePath+"_w2v";
-					}
-					values[rsltdata.attribute("w2vClId_"+attributeSets.get("w2vCl").get(wfStr)).index()]++;
-				}
-
-			}
-			
-			//empty ngram list and add remaining ngrams to the feature list
-			checkNgramFeatures(ngrams, values, "", 1, true); //toknum
-			
-			// PoS tagger related attributes: lemmas and pos tags
-			if (params.containsKey("lemmaNgrams") || 
-					(params.containsKey("pos") && !params.getProperty("pos").equalsIgnoreCase("0")) ||
-					params.containsKey("polarLexiconGeneral") ||
-					params.containsKey("polarLexiconDomain"))
-			{
-				ngrams = new LinkedList<String>();
-				if (params.containsKey("lemmaNgrams")&& (!params.getProperty("lemmaNgrams").equalsIgnoreCase("0")))
-				{
-					ngramDim = Integer.valueOf(params.getProperty("lemmaNgrams"));
-				}
-				else
-				{
-					ngramDim = 3;
-				}
-				LinkedList<String> posNgrams = new LinkedList<String>();
-				int posNgramDim =0;
-				if (params.containsKey("pos"))
-				{
-					posNgramDim = Integer.valueOf(params.getProperty("pos"));
-				}
-								
-				for (String t : window)
-				{						
-					//lemmas // && (!params.getProperty("lemmaNgrams").equalsIgnoreCase("0"))
-					if ((params.containsKey("lemmaNgrams")) || params.containsKey("polarLexiconGeneral") || params.containsKey("polarLexiconDomain"))
-					{
-						if (! savePath.contains("_l"+ngramDim))
-						{
-							savePath = savePath+"_l"+ngramDim;
-						}
-						
-						//blank line means we found a sentence end. Empty n-gram list and reiniciate.
-						if (t.equals(""))
-						{
-							// check both lemma n-grams and polarity lexicons, and add values to the feature vector
-							checkNgramsAndPolarLexicons(ngrams, values, "lemma", 1,tokNum, true, polNgrams); //toknum
-														
-							// since t is empty no need to check for clusters and other features.
-							continue;
-						}
-						
-						String[] fields = t.split("\t");
-						if (fields.length < 2)
-						{
-							continue;
-						}
-						String lemma = normalize(fields[1], params.getProperty("normalization", "none"));
-						
-						
-						if (ngrams.size() >= ngramDim)
-						{
-							ngrams.removeFirst();
-						}
-						ngrams.add(lemma);
-				       
-						// check both lemma n-grams and polarity lexicons, and add values to the feature vector
-						checkNgramsAndPolarLexicons(ngrams, values, "lemma", 1,tokNum, false, polNgrams);
-
-					}
-					
-					//pos tags
-					if (params.containsKey("pos") && !params.getProperty("pos").equalsIgnoreCase("0"))
-					{
-						if (! savePath.contains("_p"))
-						{
-							savePath = savePath+"_p";
-						}
-						
-						if (posNgrams.size() >= posNgramDim)
-						{
-							posNgrams.removeFirst();
-						}
-						
-						String[] fields = t.split("\t");
-						if (fields.length < 3)
-						{
-							continue;
-						}
-						String pos = fields[2];
-						
-						
-						posNgrams.add(pos);
-						
-						// add ngrams to the feature vector
-						checkNgramFeatures(posNgrams, values, "pos", 1, false);
-					}										
-				} //endFor
-				
-				//empty ngram list and add remaining ngrams to the feature list
-				// check both lemma n-grams and polarity lexicons, and add values to the feature vector
-				checkNgramsAndPolarLexicons(ngrams, values,"", 1,tokNum, true, polNgrams);
-				
-				//empty pos ngram list and add remaining pos ngrams to the feature list
-				checkNgramFeatures(posNgrams, values, "pos", 1, true);
-			
-			}						
-			
-			// add sentence length as a feature
-			if (params.containsKey("sentenceLength") && (! params.getProperty("sentenceLength").equalsIgnoreCase("no")))
-			{				
-				values[rsltdata.attribute("sentenceLength").index()]=tokNum;
-			}
-			
-			// compute uppercase ratio before normalization (if needed)		
-			//double upRatio =0.0;
-			//if (params.getProperty("upperCaseRatio", "no").equalsIgnoreCase("yes"))
-			//{
-			//	String upper = opNormalized.replaceAll("[a-z]", "");
-			//	upRatio = (double)upper.length() / (double)opNormalized.length();
-			//	values[rsltdata.attribute("upperCaseRation").index()] = upRatio;
-			//}
-			
-			
-			
-			
-			
-			//create object for the current instance and associate it with the current train dataset.			
-			Instance inst = new SparseInstance(1.0, values);
-			inst.setDataset(rsltdata);
-			
-			// add category attributte values
-			String cat = trainExamples.get(oId).getCategory();
-		
-			if (params.containsKey("categories") && params.getProperty("categories").compareTo("E&A")==0)
-			{
-				if (cat.compareTo("NULL")==0)
-				{
-					inst.setValue(rsltdata.attribute("entCat").index(), cat);
-					inst.setValue(rsltdata.attribute("attCat").index(), cat);	
-				}
-				else
-				{
-					String[] splitCat = cat.split("#");
-					inst.setValue(rsltdata.attribute("entCat").index(), splitCat[0]);
-					inst.setValue(rsltdata.attribute("attCat").index(), splitCat[1]);
-				}
-				
-				//inst.setValue(attIndexes.get("entAttCat"), cat);
-			}
-			else if (params.containsKey("categories") && params.getProperty("categories").compareTo("E#A")==0)
-			{
-				inst.setValue(rsltdata.attribute("entAttCat").index(), cat);
-			}
-			
-			
-			if (params.containsKey("polarity") && params.getProperty("polarity").compareTo("yes")==0)
-			{
-				// add class value as a double (Weka stores all values as doubles )
-				String pol = normalizePolarity(trainExamples.get(oId).getPolarity());
-				if (pol != null && !pol.isEmpty())
-				{
-					inst.setValue(rsltdata.attribute("polarityCat"), pol);
-				}
-				else
-				{
-					//System.err.println("polarity: _"+pol+"_");
-					inst.setMissing(rsltdata.attribute("polarityCat"));
-				}
-			}
-			
-			//add instance to train data
-			rsltdata.add(inst);
-						
-			//store opinion Id and instance Id
-			this.opInst.put(oId, instId);
-			instId++;
-		}
-
-		System.err.println("Features : loadInstancesTAB() - training data ready total number of examples -> "+trainExamplesNum+
-				" - "+rsltdata.numInstances());
-		
-		if (save)
-		{
-			try {		
-				savePath = savePath+".arff";
-				System.err.println("arff written to: "+savePath);
-				ArffSaver saver = new ArffSaver();
-		
-				saver.setInstances(rsltdata);
-		
-				saver.setFile(new File(savePath));					
-				saver.writeBatch();			 
-			} catch (IOException e1) {			
-				e1.printStackTrace();
-			} catch (Exception e2) {
-				e2.printStackTrace();
-			}
-		}
-		
-		return rsltdata;
-	}
-	
 
 	/**
 	 *   Function fills the attribute vectors for the instances existing in the Conll tabulated formatted corpus given. 
@@ -1689,7 +1345,7 @@ public class Features {
 	 * @return Weka Instances object containing the attribute vectors filled with the features specified
 	 * 			in the parameter file.
 	 */
-	public Instances loadInstancesConll (boolean save, String prefix)
+	public Instances loadInstancesConll (boolean save, String prefix, boolean tag)
 	{
 		String savePath = params.getProperty("fVectorDir")+File.separator+"arff"+File.separator+"train_"+prefix;
 		HashMap<String, Opinion> trainExamples = corpus.getOpinions();
@@ -1742,30 +1398,37 @@ public class Features {
 				polNgrams=params.getProperty("polNgrams").equalsIgnoreCase("yes");
 			}
 			
-			String nafPath = nafdir+File.separator+trainExamples.get(oId).getsId().replace(':', '_');
-			String taggedFile ="";
-			try {
-				int success=1;
-				if (!FileUtilsElh.checkFile(nafPath+".kaf"))
-				{	
-        			success = NLPpipelineWrapper.tagSentence(corpus.getOpinionSentence(oId), nafPath, corpus.getLang(),  params.getProperty("pos-model"), params.getProperty("lemma-model"), postagger);
+			String[] noWindow;
+			//tag flag tells whether the document should be tagged or the opinion was previously tagged and that tagging is to be used
+			if (tag) {
+				String nafPath = nafdir + File.separator + trainExamples.get(oId).getsId().replace(':', '_');
+				String taggedFile = "";
+				try {
+					int success = 1;
+					if (!FileUtilsElh.checkFile(nafPath + ".kaf")) {
+						success = NLPpipelineWrapper.tagSentence(corpus.getOpinionSentence(oId), nafPath,
+								corpus.getLang(), params.getProperty("pos-model"), params.getProperty("lemma-model"),
+								postagger);
+					}
+
+					if (success != 1) {
+						trainExamples.remove(oId);
+					}
+					nafPath = nafPath + ".kaf";
+					InputStream reader = new FileInputStream(new File(nafPath));
+					taggedFile = IOUtils.toString(reader);
+					reader.close();
+				} catch (IOException | JDOMException fe) {
+					// TODO Auto-generated catch block
+					fe.printStackTrace();
 				}
-				
-				if (success !=1 )
-				{
-					trainExamples.remove(oId);
-				}
-				nafPath =nafPath+".kaf";
-				InputStream reader = new FileInputStream(new File(nafPath));
-				taggedFile = IOUtils.toString(reader); 
-				reader.close();				
-			} catch (IOException | JDOMException fe) {
-				// TODO Auto-generated catch block
-				fe.printStackTrace();
-			} 
-			
-			String[] noWindow = taggedFile.split("\n");
-			
+
+				noWindow = taggedFile.split("\n");
+			}
+			else
+			{
+				noWindow = corpus.getOpinionSentence(oId).split("\n");
+			}
 			//counter for opinion sentence token number. Used for computing relative values of the features
 			int tokNum=noWindow.length;
 			

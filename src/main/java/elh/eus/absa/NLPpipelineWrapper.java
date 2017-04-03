@@ -409,7 +409,7 @@ public final class NLPpipelineWrapper {
 			if (taggerCommand.contains("ixa-pipe-pos-eu")) 
 			{
 				String[] command = { taggerCommand };
-				System.err.println("ixa-pipe-pos-eu agindua: " + Arrays.toString(command));
+				//System.err.println("ixa-pipe-pos-eu agindua: " + Arrays.toString(command));
 
 				ProcessBuilder eustBuilder = new ProcessBuilder().command(command);				
 				Process eustagger = eustBuilder.start();
