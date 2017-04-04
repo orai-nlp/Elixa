@@ -1013,7 +1013,7 @@ public class Features {
 						System.err.println("error when tagging opinion " + oId
 								+ ". Opinion removed from training set, features can not be extracted.");
 						continue;
-					}
+					}					
 				}
 
 				// can not use directly KAFDocument.createFromFile because if
@@ -1021,7 +1021,7 @@ public class Features {
 				File nafFile = new File(nafPath);
 				if (nafFile.length() == 0) {
 					it.remove();
-					System.err.println("error when tagging opinion " + oId
+					System.err.println("tagged file exist but is empty for opinion " + oId
 							+ ". Opinion removed from training set, features can not be extracted.");
 					continue;
 				} else {
@@ -3084,7 +3084,7 @@ public class Features {
 			return 0;
 		}
 
-		//System.out.println("Features::normalizeAndTag -> "+sId+" document tagging start "+currentSent);		
+		System.out.println("Features::normalizeAndTag -> "+sId+" document tagging start "+currentSent);		
 
 		if ((params.containsKey("wfngrams") || params.containsKey("lemmaNgrams")) &&
 				(! params.getProperty("normalization", "none").equalsIgnoreCase("noEmot")))
@@ -3098,7 +3098,7 @@ public class Features {
 
 		try {
 			int success = NLPpipelineWrapper.tagSentence(currentSent, nafPath, corpus.getLang(),  params.getProperty("pos-model"), params.getProperty("lemma-model"), postagger);
-			//System.out.println("Features::normalizeAndTag -> "+sId+" document tagging done");		
+			System.out.println("Features::normalizeAndTag -> "+sId+" document tagging done "+success);		
 			return success; //success
 		} catch (JDOMException e) {
 			System.err.println("Features::normalizeAndTag -> NAF error when tagging sentence");
