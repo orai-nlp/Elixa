@@ -19,7 +19,7 @@ The contents of the module are the following:
 INSTALLATION
 ============
 
-Installing the elh-absa requires the following steps:
+Installing EliXa requires the following steps:
 
 If you already have installed in your machine JDK7 and MAVEN 3, please go to step 3
 directly. Otherwise, follow these steps:
@@ -97,7 +97,6 @@ Get the resources from https://github.com/ixa-ehu/ixa-pipe-pos#resources and unp
 ````shell
 cd elixa
 wget http://ixa2.si.ehu.es/ixa-pipes/models/lemmatizer-dicts.tar.gz
-src/main/resources
 tar -xzvf lemmatizer-dicts.tar.gz -C src/main/resources
 ````
 
@@ -110,7 +109,17 @@ cp src/main/resources/lemmatizer-dicts/freeling/es-locutions.txt src/main/resour
 cp src/main/resources/es/es-locutions.txt src/main/resources/lemmatizer-dicts/freeling/es-locutions.txt
 ````
 
-Also, you will need the postagging models for ixa-pipes. This are not needed at compilation time as you specify the pos-model file in the configuration file. You can get the model from https://github.com/ixa-ehu/ixa-pipe-pos#models . Elixa uses the 1.5.0 models.
+Also, you will need the postagging models for ixa-pipes. This are not needed at compilation time as you specify the pos-model file in the configuration file. You can get the model from https://github.com/ixa-ehu/ixa-pipe-pos#models . 
+
+Elixa uses the 1.5.0 models, and configuration files provided in the Resources section assume that the models are unpacked to the src/main/resources directory. The following commands will download and unpack the models to your src/main resources directory. If you change the destination or the models remember to set the paths in the configuration files accordingly.  
+
+````shell
+cd elixa
+wget http://ixa2.si.ehu.es/ixa-pipes/models/morph-models-1.5.0.tar.gz
+tar -xzvf morph-models-1.5.0.tar.gz -C src/main/resources
+````
+
+
 
 4. Resources
 ---------------------------
@@ -125,7 +134,7 @@ cd src/main/resources
 tar -xzvf elixa-resources_0.8.tgz
 ````
 
-We also basic polarity classification model for the previous languages. Models have been trained over Twitter data in the context of the Behagunea (behagunea.dss2016.eu) project. Data is specific on the topic "San Sebastian 2016 Cultural Capital of Europe". 
+We also provide basic polarity classification models for the previous languages. Models have been trained over Twitter data in the context of the Behagunea (behagunea.dss2016.eu) project. Data is specific on the topic "San Sebastian 2016 Cultural Capital of Europe". 
 
 You can get the models from http://komunitatea.elhuyar.eus/ig/files/2016/02/elixa-behagunea-models_0.8.tar.gz.
 

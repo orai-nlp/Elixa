@@ -4,19 +4,19 @@
 	<groupId>elh.eus</groupId>
 	<artifactId>elixa</artifactId>
 	<packaging>jar</packaging>
-	<version>0.5</version>
+	<version>0.9</version>
 	<name>elixa</name>
 	<description>elixa, aspect-based sentiment analysis solution. Developed by ELhuyar Foundation (elhuyar.eus) and IXA NLP Group of the University of the Basque Country (ixa.si.ehu.es).</description>
 	<developers>
 		<developer>
 			<id>isanvi</id>
 			<name>Iñaki San Vicente</name>
-			<email>i.sanvicente@elhuyar.com</email>
+			<email>i.sanvicente@elhuyar.eus</email>
 		</developer>
 		<developer>
 			<id>jasaur</id>
 			<name>Xabier Saralegi</name>
-			<email>x.saralegi@elhuyar.com</email>
+			<email>x.saralegi@elhuyar.eus</email>
 		</developer>
 		<developer>
 			<id>ragerri</id>
@@ -145,5 +145,5 @@
 		
 		</plugins>
 	</build>
-	<url>https://bitbucket.org/elh-eus/elh-absa</url>
+	<url>https://github.com/Elhuyar/Elixa</url>
 </project>
