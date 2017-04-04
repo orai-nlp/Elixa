@@ -919,7 +919,7 @@ public class Features {
 	 */
 	public Instances loadInstances (boolean save, String prefix) throws IOException
 	{
-		String savePath = params.getProperty("fVectorDir")+File.separator+"arff"+File.separator+"train_"+prefix;
+		String savePath = params.getProperty("fVectorDir")+File.separator+File.separator+corpus.getLang()+"-features_"+prefix;
 		HashMap<String, Opinion> trainExamples = corpus.getOpinions();
 				
 		int trainExamplesNum = trainExamples.size();
@@ -1347,7 +1347,7 @@ public class Features {
 	 */
 	public Instances loadInstancesConll (boolean save, String prefix, boolean tag)
 	{
-		String savePath = params.getProperty("fVectorDir")+File.separator+"arff"+File.separator+"train_"+prefix;
+		String savePath = params.getProperty("fVectorDir")+File.separator+corpus.getLang()+"-features_"+prefix;
 		HashMap<String, Opinion> trainExamples = corpus.getOpinions();
 			
 		String nafdir = params.getProperty("kafDir");
