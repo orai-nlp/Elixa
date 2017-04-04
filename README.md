@@ -159,7 +159,7 @@ mvn clean package
 This step will create a directory called target/ which contains various directories and files.
 Most importantly, there you will find the module executable:
 
-elixa-0.5.jar
+elixa-0.9.jar
 
 This executable contains every dependency the module needs, so it is completely portable as long
 as you have a JVM 1.7 installed.
@@ -200,7 +200,7 @@ Tag-gp command is intended to tag new examples with a preexisting model. The exa
 
 
 ````shell
-java -jar target/elixa-0.5.jar tag-gp -f ireom -m path/to/model/en-twt.model -cn 3 -p path/to/model/en-twt.cfg -l en < input.tab  > output_tagged.txt
+java -jar target/elixa-0.9.jar tag-gp -f ireom -m path/to/model/en-twt.model -cn 3 -p path/to/model/en-twt.cfg -l en < input.tab  > output_tagged.txt
  ````
     where:
 	"-f ireom" is the format of the corpus:
@@ -213,7 +213,7 @@ java -jar target/elixa-0.5.jar tag-gp -f ireom -m path/to/model/en-twt.model -cn
 
 For more information on the parameters of the tag-gp command you can type:
 ````shell
-java -jar target/elixa-0.5.jar tag-gp -h
+java -jar target/elixa-0.9.jar tag-gp -h
 ````
 
 ### train-gp
@@ -221,7 +221,7 @@ java -jar target/elixa-0.5.jar tag-gp -h
 Train-gp is used to train polarity classification models using a previously tagged dataset. This process can be time consuming depending on the size of the corpus and the features we choose to use.
 
 ````shell
-java -jar target/elixa-1.0.jar train-gp -f tabNotagged -cn 3 -l es -p models/es-twt.cfg < ~/corpora/opinion-Datasets/Behagune/es-behagtwtpressUniq.tsv > rslt/es-modTreatment/es-twtBehag201602twtpressUniq-Bsline-Old-NonegFix.rslt
+java -jar target/elixa-0.9.jar train-gp -f tabNotagged -cn 3 -l es -p models/es-twt.cfg < ~/corpora/opinion-Datasets/Behagune/es-behagtwtpressUniq.tsv > rslt/es-modTreatment/es-twtBehag201602twtpressUniq-Bsline-Old-NonegFix.rslt
 ````		       
 
       explanation:
@@ -244,7 +244,7 @@ java -jar target/elixa-1.0.jar train-gp -f tabNotagged -cn 3 -l es -p models/es-
        The rest of the parameters have the same meaning as in the tag-gp command. By the default, train-gp command performs 10-fold cross validation and 90 train /10 test division evaluation of the trained model. this can be change by passing "--foldNum" and "--validation" parameters. For further information on those parameters you can type:
 
 ````shell
-java -jar target/elixa-0.5.jar train-gp -h
+java -jar target/elixa-0.9.jar train-gp -h
 ````
 
 
@@ -253,7 +253,7 @@ java -jar target/elixa-0.5.jar train-gp -h
 eval-gp command is intended to evaluate a previously trained model on a new tagged dataset. The input is a corpus with polarity annotations at document level. eval-gp evaluates the given model against the dataset and outputs evaluation result statistics. Predictions for each document can also be included in the output.
 
 ````shell
-java -jar target/elixa-0.5.jar eval-gp -f tabNotagged -cn 3 -l es -p models/es-twt.cfg -m path/es-twt.model < /path/to/input/dataset.tsv > /path/to/evaluation.rslt
+java -jar target/elixa-0.9.jar eval-gp -f tabNotagged -cn 3 -l es -p models/es-twt.cfg -m path/es-twt.model < /path/to/input/dataset.tsv > /path/to/evaluation.rslt
 ````
 
       explanation:
@@ -268,7 +268,7 @@ java -jar target/elixa-0.5.jar eval-gp -f tabNotagged -cn 3 -l es -p models/es-t
        The rest of the parameters have the same meaning as in the tag-gp command. For further information on those parameters you can type:
 
 ````shell
-java -jar target/elixa-0.5.jar eval-gp -h
+java -jar target/elixa-0.9.jar eval-gp -h
 ````
 
 
@@ -285,13 +285,13 @@ java -jar target/elixa-0.5.jar tagSentences -d testTag -m absa-models/pos-models
 
     For more information you can type: 
 ````shell
- java -jar target/elixa-0.5.jar tagSentences -h
+ java -jar target/elixa-0.9.jar tagSentences -h
 ````
 
 ### tag-naf 
 
 ````shell
- java -jar target/elixa-0.5.jar tag-naf -l path/to/lexicon.lex < posTagged_input.naf > SentTagged_output.naf
+ java -jar target/elixa-0.9.jar tag-naf -l path/to/lexicon.lex < posTagged_input.naf > SentTagged_output.naf
 ````
 
     where: 
