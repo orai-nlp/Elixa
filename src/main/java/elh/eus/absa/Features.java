@@ -1007,7 +1007,7 @@ public class Features {
 													// (!lemmaNgrams.isEmpty()))
 			{
 				if (!FileUtilsElh.checkFile(nafPath)) {
-					long success = normalizeAndTag(corpus.getOpinionSentence(oId), nafDir);
+					long success = normalizeAndTag(corpus.getOpinion(oId).getsId(), nafDir);
 					if (success == 0) {
 						it.remove();
 						System.err.println("error when tagging opinion " + oId
@@ -3084,7 +3084,7 @@ public class Features {
 			return 0;
 		}
 
-		System.out.println("Features::normalizeAndTag -> "+sId+" document tagging start "+currentSent);		
+		//System.out.println("Features::normalizeAndTag -> "+sId+" document tagging start "+currentSent);		
 
 		if ((params.containsKey("wfngrams") || params.containsKey("lemmaNgrams")) &&
 				(! params.getProperty("normalization", "none").equalsIgnoreCase("noEmot")))
