@@ -1,0 +1,11 @@
+Elixa 0.9 (2017/04/03):
+	- Updated ixa-pipes to the last version (1.5.0)
+	- Included Basque Ixa-pipe (eustagger tagging is still available, if ixa-pipe-pos-eu or eustagger-lite are installed in the system)
+	- Sentiment modifier treatment added to feature extraction (modifiers must be defined in the polarity lexicon (WEA|INC|SHI)
+	- Kaflib-naf is included in the source code because of invalid xml issues (a modified version is used which includes xml validation)
+	
+Elixa 0.5 (2016/08/29):
+	- First working version.
+	- Ixa-pipe-pos 1.4.6 models are used.
+	- Basque NLP chain need external program eustagger_lite
+	- Fully working for FR,EN,ES,EU.
