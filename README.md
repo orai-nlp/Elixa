@@ -1,12 +1,10 @@
 
-EliXa
-=======
+# EliXa
 
 Aspect based sentiment analysis platform developed by the Elhuyar Foundation. Licensed under GNU GPL v3 terms.
 
 
-Contents
-========
+# Contents
 
 The contents of the module are the following:
 
@@ -16,16 +14,15 @@ The contents of the module are the following:
     target/                 it contains binary executable and other directories
 
 
-INSTALLATION
-============
+# INSTALLATION
 
 Installing EliXa requires the following steps:
 
 If you already have installed in your machine JDK7 and MAVEN 3, please go to step 3
 directly. Otherwise, follow these steps:
 
-1. Install JDK 1.7
--------------------
+## 1. Install JDK 1.7
+
 
 If you do not install JDK 1.7 in a default location, you will probably need to configure the PATH in .bashrc or .bash_profile:
 
@@ -49,8 +46,7 @@ java -version
 
 You should now see that your jdk is 1.7
 
-2. Install MAVEN 3
-------------------
+## 2. Install MAVEN 3
 
 Download MAVEN 3 from
 
@@ -78,21 +74,21 @@ If you re-login into your shell and run the command
 mvn -version
 ````
 
-You should see reference to the MAVEN version you have just installed plus the JDK 6 that is using.
+You should see reference to the MAVEN version you have just installed plus the JDK version that is using.
 
-2. Get module source code
---------------------------
+## 3. Get module source code
+
 
 ````shell
 git clone https://github.com/Elhuyar/Elixa
 ````
 
-3. Dependencies - IXA-PIPES
----------------------------
+## 4. Dependencies - IXA-PIPES
 
-EliXa uses internally ixa-pipes as default NLP chain (Other NLP processors are supported so long as the input is in one of the accepted formats [tab|naf-xml]). Ixa-pipes require certain resources to be included in the src/main/resources directory before compilation.
 
-Get the resources from https://github.com/ixa-ehu/ixa-pipe-pos#resources and unpack them in the src/main/resources directory
+EliXa uses internally ixa-pipes as default NLP chain (Other NLP processors are supported so long as the input is in one of the accepted formats [tab|naf-xml]). Ixa-pipes require certain resources to be included in the `src/main/resources` directory before compilation.
+
+Get the resources from https://github.com/ixa-ehu/ixa-pipe-pos#resources and unpack them in the `src/main/resources` directory
 
 ````shell
 cd elixa
@@ -100,7 +96,7 @@ wget http://ixa2.si.ehu.es/ixa-pipes/models/lemmatizer-dicts.tar.gz
 tar -xzvf lemmatizer-dicts.tar.gz -C src/main/resources
 ````
 
-If you wish a better multiword term (MWT) recognition (for Spanish only) overwrite the file src/main/resources/lemmatizer-dicts/freeling/es-locutions.txt with the one in src/main/resources/es/es-locutions.txt
+If you wish a better multiword term (MWT) recognition (for Spanish only) overwrite the file `src/main/resources/lemmatizer-dicts/freeling/es-locutions.txt` with the one in `src/main/resources/es/es-locutions.txt`
 
 WARNING: This multiword list is compiled for sentiment analysis purposes. It tags expressions such as "Buenos días (good morning)". In order for it to be effective, those MWT should also be included in the polarity lexicon, in order to match then later. 
 
@@ -109,9 +105,9 @@ cp src/main/resources/lemmatizer-dicts/freeling/es-locutions.txt src/main/resour
 cp src/main/resources/es/es-locutions.txt src/main/resources/lemmatizer-dicts/freeling/es-locutions.txt
 ````
 
-Also, you will need the postagging models for ixa-pipes. This are not needed at compilation time as you specify the pos-model file in the configuration file. You can get the model from https://github.com/ixa-ehu/ixa-pipe-pos#models . 
+Also, you will need the postagging models for ixa-pipes. This are not needed at compilation time as you specify the pos-model file in the configuration file. You can get the models from https://github.com/ixa-ehu/ixa-pipe-pos#models . 
 
-Elixa uses the 1.5.0 models, and configuration files provided in the Resources section assume that the models are unpacked to the src/main/resources directory. The following commands will download and unpack the models to your src/main resources directory. If you change the destination or the models remember to set the paths in the configuration files accordingly.  
+Elixa uses the 1.5.0 models, and configuration files provided in the Resources section assume that the models are unpacked to the `src/main/resources` directory. The following commands will download and unpack the models to your src/main resources directory. If you change the destination or the models remember to set the paths in the configuration files accordingly.  
 
 ````shell
 cd elixa
@@ -121,8 +117,8 @@ tar -xzvf morph-models-1.5.0.tar.gz -C src/main/resources
 
 
 
-4. Resources
----------------------------
+## 5. Resources
+
 
 EliXa may use several language specific resources, such as polarity lexicons and other resources for text normalization. We currently provide such resources for 4 languages; Basque (eu), Spanish (es), English (en) and French (fr). 
 You can get the resources from http://komunitatea.elhuyar.eus/ig/files/2016/02/elixa-resources_0.8.tgz and unpack them in the src/main/resources directory
@@ -134,7 +130,7 @@ cd src/main/resources
 tar -xzvf elixa-resources_0.8.tgz
 ````
 
-We also provide basic polarity classification models for the previous languages. Models have been trained over Twitter data in the context of the Behagunea (behagunea.dss2016.eu) project. Data is specific on the topic "San Sebastian 2016 Cultural Capital of Europe". 
+We also provide basic polarity classification models for the previous languages. Models have been trained over Twitter data in the context of the [Behagunea](behagunea.dss2016.eu) project. Data is specific on the topic "San Sebastian 2016 Cultural Capital of Europe". 
 
 You can get the models from http://komunitatea.elhuyar.org/ig/files/2017/04/elixa-models-0.9.tgz
 
@@ -150,15 +146,15 @@ Old versions' models:
    - 0.8: http://komunitatea.elhuyar.eus/ig/files/2016/02/elixa-behagunea-models_0.8.tar.gz
 
 
-6. Installing using maven
----------------------------
+## 6. Installing using maven
+
 
 ````shell
 cd elixa
 mvn clean package
 ````
 
-This step will create a directory called target/ which contains various directories and files.
+This step will create a directory called `target/` which contains various directories and files.
 Most importantly, there you will find the module executable:
 
 elixa-0.9.jar
@@ -172,10 +168,9 @@ To install the module in the local maven repository, usually located in ~/.m2/, 
 mvn clean install
 ````
 
-6. Test installation
----------------------------
+## 7. Test installation
 
-In order to test the Installation, a simple script is provided (test_Elixa.sh). The script will run EliXa and tag the files in the src/main/resources/examples folder. The script assumes the exexutable is in the target directory (target/elixa-0.9.jar) and that models and their configurations have been unpacked in the installation directory (./elixa-models-0.9)
+In order to test the Installation, a simple script is provided (test_Elixa.sh). The script will run EliXa and tag the files in the `src/main/resources/examples` folder. The script assumes the executable is in the target directory (`target/elixa-0.9.jar`) and that models and their configurations have been unpacked in the installation directory (`./elixa-models-0.9`)
 
 ````shell
 sh test_Elixa.sh
@@ -184,14 +179,13 @@ sh test_Elixa.sh
 
 
 
-
-7. USING EliXa
-=========================
+# USING EliXa
 
 
-EliXa Funcionalities
-==========================
-EliXa aims to provide 4 main funcionalities:
+## EliXa Funcionalities
+
+
+EliXa aims to provide 4 main functionalities:
 
    - **ate**: Aspect term extraction (term category classification included.
    - **atp**: Aspect term polarity
@@ -206,12 +200,12 @@ Currently the following command are available:
     tagSentences         Lemmatization and PoS tagging CLI
     tag-naf              Predict polarity of a text in naf format 
 
-Example uses
----------------------------
+
+## Example uses
 
 ### tag-gp 
 
-Tag-gp command is intended to tag new examples with a preexisting model. The examples can be either sentences or full texts. For each examples the system will return a polarity class depending on the model we use (typically p|neu|n). 
+Tag-gp command is intended to tag new examples with a pre-existing model. The examples can be either sentences or full texts. For each examples the system will return a polarity class depending on the model we use (typically p|neu|n). 
 
 
 ````shell
@@ -221,10 +215,10 @@ java -jar target/elixa-0.9.jar tag-gp -f ireom -m path/to/model/en-twt.model -cn
 	"-f ireom" is the format of the corpus:
               - "ireom" format means: "id<tab>text" per line, with not polarity annotations.
               - "tabNotagged" format means: "id<tab>polarity<tab>text" if a previous polarity annotation is available (if not this format can also be used and using '?' or 'null' char as polarity.
-      "-m model"  is the path to the Elixa global polarity classifier model. If you didn't train your own model use one of the aformentioned models.
+      "-m model"  is the path to the Elixa global polarity classifier model. If you didn't train your own model use one of the aforementioned models.
       "-cn 3" the number of classes of the classifier. This parameter depends on the model used. The models offered here provide 3-category classification (pos|neg|neu). If we have 5-category model (p+|p|neu|n|n+) this parameter can be used to tell Elixa to map the results into a 3-category model.
       "-p configurationFile"  path to the configuration file. Provided model contain its corresponding configuration files (.cfg extension). IMPORTANT: properties containing paths in the config file must be correctly set according to your system locations
-      "-l en" language of the corpus (iso-639 code), english in this example. Elixa allows the following languages to be used: es|eu|en|fr
+      "-l en" language of the corpus (iso-639 code), English in this example. Elixa allows the following languages to be used: es|eu|en|fr
 
 For more information on the parameters of the tag-gp command you can type:
 ````shell
@@ -233,7 +227,7 @@ java -jar target/elixa-0.9.jar tag-gp -h
 
 ### train-gp
 
-Train-gp is used to train polarity classification models using a previously tagged dataset. This process can be time consuming depending on the size of the corpus and the features we choose to use.
+Train-gp is used to train polarity classification models using a previously tagged data-set. This process can be time consuming depending on the size of the corpus and the features we choose to use.
 
 ````shell
 java -jar target/elixa-0.9.jar train-gp -f tabNotagged -cn 3 -l es -p models/es-twt.cfg < ~/corpora/opinion-Datasets/Behagune/es-behagtwtpressUniq.tsv > rslt/es-modTreatment/es-twtBehag201602twtpressUniq-Bsline-Old-NonegFix.rslt
@@ -293,6 +287,7 @@ java -jar target/elixa-0.9.jar eval-gp -h
 ````shell
 java -jar target/elixa-0.5.jar tagSentences -d testTag -m absa-models/pos-models/en/en-maxent-100-c5-baseline-dict-penn.bin -l en < input_file.txt
  ````
+ 	
     where:
         "-d  TestTag" is the directory where tagged files will be stored with the following name: <id>_g.kaf
         "-m path/to/pos-model.bin" is the path to the ixa-pipes-pos pos-model (version 1.4.6).
@@ -318,16 +313,21 @@ java -jar target/elixa-0.5.jar tagSentences -d testTag -m absa-models/pos-models
      *     First two columns are mandatory. Alternatively, first column can contain lemmas instead of offsets.
      */
 
- The output of this command is a NAF file, but with the prior polarity of the lemmas in the text annotated. e.g.:    
+ The output of this command is a NAF file, but with the prior polarity of the lemmas in the text annotated. e.g.:
+     
 ````shell
      - input NAF term element example: 
+
      <term id="t28" type="open" lemma="irrelevance" pos="N" morphofeat="NN">
       <span>
         <target id="w28" />
       </span>
     </term>
-
+````
      - output would be:
+
+````shell
+
      <term id="t28" type="open" lemma="irrelevance" pos="N" morphofeat="NN">
       **<sentiment polarity="negative" />**
       <span>
