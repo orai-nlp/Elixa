@@ -146,7 +146,7 @@ Old versions' models:
    - 0.8: http://komunitatea.elhuyar.eus/ig/files/2016/02/elixa-behagunea-models_0.8.tar.gz
 
 
-## 6. Installing using maven
+## 6. Install using maven
 
 
 ```shell
@@ -157,7 +157,9 @@ mvn clean package
 This step will create a directory called `target/` which contains various directories and files.
 Most importantly, there you will find the module executable:
 
+```shell
 elixa-0.9.jar
+```
 
 This executable contains every dependency the module needs, so it is completely portable as long
 as you have a JVM 1.7 installed.
@@ -235,8 +237,7 @@ Train-gp is used to train polarity classification models using a previously tagg
 java -jar target/elixa-0.9.jar train-gp -f tabNotagged -cn 3 -l es -p models/es-twt.cfg < ~/corpora/opinion-Datasets/Behagune/es-behagtwtpressUniq.tsv > rslt/es-modTreatment/es-twtBehag201602twtpressUniq-Bsline-Old-NonegFix.rslt
 ```
 
-explanation: 
-	Parameters are very similar to the tag-gp commands. 
+	where (Parameters are very similar to the tag-gp commands): 
 
        "-f tabNotagged" is the format of the corpus:
        		-"tabNotagged" format means: "id<tab>polarity<tab>text" where text is raw text. if used this format, Elixa takes care of linguistically tagging the texts through ixa-pipes.
@@ -254,7 +255,7 @@ explanation:
 			- "pol|polarity" = pos,neg,neu 
 			- score is the same as polarity but in a numeric scale (e.g. [1..5])
 
-   The rest of the parameters have the same meaning as in the `tag-gp` command. By the default, `train-gp` command performs 10-fold cross validation and 90 train /10 test division evaluation of the trained model. this can be change by passing `--foldNum` and `--validation` parameters. For further information on those parameters you can type:
+   The rest of the parameters have the same meaning as in the `tag-gp` command. By the default, `train-gp` command performs 10-fold cross validation and 90 train /10 test division evaluation of the trained model. this can be changed by passing `--foldNum` and `--validation` parameters. For further information on those parameters you can type:
 
 
 ```shell
@@ -270,7 +271,7 @@ eval-gp command is intended to evaluate a previously trained model on a new tagg
 java -jar target/elixa-0.9.jar eval-gp -f tabNotagged -cn 3 -l es -p models/es-twt.cfg -m path/es-twt.model < /path/to/input/dataset.tsv > /path/to/evaluation.rslt
 ```
 
-	explanation:
+	where:
        Again, parameters are very similar to those of the train-gp command. Specific parameters of this command include:
 
 	   -r, --ruleBasedClassifier
@@ -279,7 +280,7 @@ java -jar target/elixa-0.9.jar eval-gp -f tabNotagged -cn 3 -l es -p models/es-t
 		-o, --outputPredictions
             Output predictions or not; output is the corpus annotated with semeval2015 format.
 
-   The rest of the parameters have the same meaning as in the tag-gp command. For further information on those parameters you can type:
+The rest of the parameters have the same meaning as in the tag-gp command. For further information on those parameters you can type:
 
 
 ```shell
@@ -293,12 +294,13 @@ java -jar target/elixa-0.9.jar eval-gp -h
 ```shell
 java -jar target/elixa-0.5.jar tagSentences -d testTag -m absa-models/pos-models/en/en-maxent-100-c5-baseline-dict-penn.bin -l en < input_file.txt
  ```
-    where:
+ 
+	where:
         "-d  TestTag" is the directory where tagged files will be stored with the following name: <id>_g.kaf
         "-m path/to/pos-model.bin" is the path to the ixa-pipes-pos pos-model (version 1.4.6).
         "-l en" language of the texts
 
-   For more information you can type: 
+For more information you can type: 
 
 ```shell
  java -jar target/elixa-0.9.jar tagSentences -h
@@ -310,7 +312,7 @@ java -jar target/elixa-0.5.jar tagSentences -d testTag -m absa-models/pos-models
  java -jar target/elixa-0.9.jar tag-naf -l path/to/lexicon.lex < posTagged_input.naf > SentTagged_output.naf
 ```
 
-   where: 
+	where: 
 	"-l path/to/lexicon.lex" is the path to the lexicon. Various lexicon formats are accepted:
             
      /*
