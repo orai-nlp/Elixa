@@ -136,16 +136,18 @@ tar -xzvf elixa-resources_0.8.tgz
 
 We also provide basic polarity classification models for the previous languages. Models have been trained over Twitter data in the context of the Behagunea (behagunea.dss2016.eu) project. Data is specific on the topic "San Sebastian 2016 Cultural Capital of Europe". 
 
-You can get the models from http://komunitatea.elhuyar.eus/ig/files/2016/02/elixa-behagunea-models_0.8.tar.gz.
-
+You can get the models from http://komunitatea.elhuyar.org/ig/files/2017/04/elixa-models-0.9.tgz
 
 ````shell
 cd elixa
-wget http://komunitatea.elhuyar.eus/ig/files/2016/02/elixa-behagunea-models_0.8.tar.gz
+wget http://komunitatea.elhuyar.org/ig/files/2017/04/elixa-models-0.9.tgz
 cd src/main/resources
-tar -xzvf elixa-behagunea-models_0.8.tar.gz
+tar -xzvf elixa-models-0.9.tgz
 ````
 
+
+Old versions' models:
+   - 0.8: http://komunitatea.elhuyar.eus/ig/files/2016/02/elixa-behagunea-models_0.8.tar.gz
 
 
 6. Installing using maven
