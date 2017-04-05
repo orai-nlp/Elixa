@@ -211,16 +211,18 @@ Tag-gp command is intended to tag new examples with a pre-existing model. The ex
 ```shell
 java -jar target/elixa-0.9.jar tag-gp -f ireom -m path/to/model/en-twt.model -cn 3 -p path/to/model/en-twt.cfg -l en < input.tab  > output_tagged.txt
  ```
-    where:
+
+	where:
 	"-f ireom" is the format of the corpus:
-              - "ireom" format means: "id<tab>text" per line, with not polarity annotations.
-              - "tabNotagged" format means: "id<tab>polarity<tab>text" if a previous polarity annotation is available (if not this format can also be used and using '?' or 'null' char as polarity.
+          - "ireom" format means: "id<tab>text" per line, with not polarity annotations.
+          - "tabNotagged" format means: "id<tab>polarity<tab>text" if a previous polarity annotation is available (if not this format can also be used and using '?' or 'null' char as polarity.
       "-m model"  is the path to the Elixa global polarity classifier model. If you didn't train your own model use one of the aforementioned models.
       "-cn 3" the number of classes of the classifier. This parameter depends on the model used. The models offered here provide 3-category classification (pos|neg|neu). If we have 5-category model (p+|p|neu|n|n+) this parameter can be used to tell Elixa to map the results into a 3-category model.
       "-p configurationFile"  path to the configuration file. Provided model contain its corresponding configuration files (.cfg extension). IMPORTANT: properties containing paths in the config file must be correctly set according to your system locations
       "-l en" language of the corpus (iso-639 code), English in this example. Elixa allows the following languages to be used: es|eu|en|fr
 
 For more information on the parameters of the tag-gp command you can type:
+
 ```shell
 java -jar target/elixa-0.9.jar tag-gp -h
 ```
@@ -231,13 +233,15 @@ Train-gp is used to train polarity classification models using a previously tagg
 
 ```shell
 java -jar target/elixa-0.9.jar train-gp -f tabNotagged -cn 3 -l es -p models/es-twt.cfg < ~/corpora/opinion-Datasets/Behagune/es-behagtwtpressUniq.tsv > rslt/es-modTreatment/es-twtBehag201602twtpressUniq-Bsline-Old-NonegFix.rslt
-```		       
+```
 
-  explanation:
-       Parameters are very similar to the tag-gp commands. 
+explanation: 
+	Parameters are very similar to the tag-gp commands. 
+
        "-f tabNotagged" is the format of the corpus:
-       	   - "tabNotagged" format means: "id<tab>polarity<tab>text" where text is raw text. if used this format, Elixa takes care of linguistically tagging the texts through ixa-pipes.
-	   - "tabglobal" format means: an already linguistically tagged corpus in conll format (if you have a corpus tagged with a tagger other than ixa-pipes for example). A pseudo xml format is used to pass document boundaries and polarity annotations. The format of the corpus must be as follows:
+       		-"tabNotagged" format means: "id<tab>polarity<tab>text" where text is raw text. if used this format, Elixa takes care of linguistically tagging the texts through ixa-pipes.
+	   		- "tabglobal" format means: an already linguistically tagged corpus in conll format (if you have a corpus tagged with a tagger other than ixa-pipes for example). A pseudo xml format is used to pass document boundaries and polarity annotations. The format of the corpus must be as follows:
+	   		
 	   <doc id=\"([^\"]+)\" (pol|polarity)=\"([^\"]+)\"( score=\"([^\"]+)\")?>
 	   forma<tab>lema<tab>PoS
 	   forma<tab>lema<tab>PoS
@@ -245,10 +249,10 @@ java -jar target/elixa-0.9.jar train-gp -f tabNotagged -cn 3 -l es -p models/es-
 	   </doc>
 	   ...
 	      
-   where
-	- id is any character string ([^\"]+)
-	- "pol|polarity" = pos,neg,neu 
-	- score is the same as polarity but in a numeric scale (e.g. [1..5])
+		where
+			- id is any character string ([^\"]+)
+			- "pol|polarity" = pos,neg,neu 
+			- score is the same as polarity but in a numeric scale (e.g. [1..5])
 
    The rest of the parameters have the same meaning as in the `tag-gp` command. By the default, `train-gp` command performs 10-fold cross validation and 90 train /10 test division evaluation of the trained model. this can be change by passing `--foldNum` and `--validation` parameters. For further information on those parameters you can type:
 
@@ -266,16 +270,17 @@ eval-gp command is intended to evaluate a previously trained model on a new tagg
 java -jar target/elixa-0.9.jar eval-gp -f tabNotagged -cn 3 -l es -p models/es-twt.cfg -m path/es-twt.model < /path/to/input/dataset.tsv > /path/to/evaluation.rslt
 ```
 
-   explanation:
+	explanation:
        Again, parameters are very similar to those of the train-gp command. Specific parameters of this command include:
 
-   -r, --ruleBasedClassifier
+	   -r, --ruleBasedClassifier
             Whether rule based classifier should be used instead of the default ML classifier for computing polarity. A polarity lexicon is mandatory if the rule based classifier is used (polarity lexicon path is specified in the configuration file).
                          
-   -o, --outputPredictions
+		-o, --outputPredictions
             Output predictions or not; output is the corpus annotated with semeval2015 format.
 
    The rest of the parameters have the same meaning as in the tag-gp command. For further information on those parameters you can type:
+
 
 ```shell
 java -jar target/elixa-0.9.jar eval-gp -h
