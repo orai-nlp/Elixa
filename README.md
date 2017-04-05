@@ -172,6 +172,19 @@ To install the module in the local maven repository, usually located in ~/.m2/, 
 mvn clean install
 ````
 
+6. Test installation
+---------------------------
+
+In order to test the Installation, a simple script is provided (test_Elixa.sh). The script will run EliXa and tag the files in the src/main/resources/examples folder. The script assumes the exexutable is in the target directory (target/elixa-0.9.jar) and that models and their configurations have been unpacked in the installation directory (./elixa-models-0.9)
+
+````shell
+sh test_Elixa.sh
+````
+ 
+
+
+
+
 7. USING EliXa
 =========================
 
