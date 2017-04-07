@@ -332,10 +332,10 @@ public class CLI {
 	public final void loadTagSentParameters()
 	{
 		tagSentParser.addArgument("-m", "--model")
-		.required(true)
+		.required(false)
 		.help("Pass the model to do the tagging as a parameter.\n");
 		tagSentParser.addArgument("-lm", "--lemmaModel")
-		.required(true)
+		.required(false)
 		.help("Pass the model to do the lemmatization as a parameter.\n");
 		tagSentParser.addArgument("-d", "--dir")
 		.required(true)
