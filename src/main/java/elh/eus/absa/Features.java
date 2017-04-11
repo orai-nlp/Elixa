@@ -505,7 +505,7 @@ public class Features {
         	{
         		if (!eustagger.matcher(params.getProperty("pos-model")).find())
         		{
-        			Properties posProp = NLPpipelineWrapper.setPostaggerProperties( params.getProperty("pos-model"), params.getProperty("lemma-model"),
+        			Properties posProp = NLPpipelineWrapper.setPostaggerProperties( params.getProperty("pos-model", "default"), params.getProperty("lemma-model", "default"),
         					corpus.getLang(), "false", "false");					
         			try {
 						postagger = new eus.ixa.ixa.pipe.pos.Annotate(posProp);
@@ -938,7 +938,7 @@ public class Features {
         	{
         		if (!eustagger.matcher(params.getProperty("pos-model")).find())
         		{
-        			Properties posProp = NLPpipelineWrapper.setPostaggerProperties( params.getProperty("pos-model"), params.getProperty("lemma-model"),
+        			Properties posProp = NLPpipelineWrapper.setPostaggerProperties( params.getProperty("pos-model", "default"), params.getProperty("lemma-model", "default"),
         					corpus.getLang(), "false", "false");					
         			try {
 						postagger = new eus.ixa.ixa.pipe.pos.Annotate(posProp);
@@ -1407,7 +1407,7 @@ public class Features {
 					int success = 1;
 					if (!FileUtilsElh.checkFile(nafPath + ".kaf")) {
 						success = NLPpipelineWrapper.tagSentence(corpus.getOpinionSentence(oId), nafPath,
-								corpus.getLang(), params.getProperty("pos-model"), params.getProperty("lemma-model"),
+								corpus.getLang(), params.getProperty("pos-model", "default"), params.getProperty("lemma-model", "default"),
 								postagger);
 					}
 
@@ -3097,7 +3097,7 @@ public class Features {
 		String nafPath = nafDir+File.separator+sId.replace(':', '_');	
 
 		try {
-			int success = NLPpipelineWrapper.tagSentence(currentSent, nafPath, corpus.getLang(),  params.getProperty("pos-model"), params.getProperty("lemma-model"), postagger);
+			int success = NLPpipelineWrapper.tagSentence(currentSent, nafPath, corpus.getLang(),  params.getProperty("pos-model", "default"), params.getProperty("lemma-model", "default"), postagger);
 			//System.err.println("Features::normalizeAndTag -> "+sId+" document tagging done "+success);		
 			return success; //success
 		} catch (JDOMException e) {

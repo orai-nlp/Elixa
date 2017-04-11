@@ -34,6 +34,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -1049,7 +1050,21 @@ public class CorpusReader {
 	 * @throws JDOMException
 	 */
 	public void tagSentences(String nafdir, String posModel, String lemmaModel, boolean print) throws IOException, JDOMException
-	{				
+	{		
+		eus.ixa.ixa.pipe.pos.Annotate postagger = null;
+		if (!eustagger.matcher(posModel).find())
+		{
+			Properties posProp = NLPpipelineWrapper.setPostaggerProperties( posModel, lemmaModel,
+					this.getLang(), "false", "false");					
+			try {
+				postagger = new eus.ixa.ixa.pipe.pos.Annotate(posProp);
+			} catch (IOException e) {						
+				e.printStackTrace();
+				System.err.println("Features::CreateFeatureSet error creating ixa-pipe postagger object, execution aborted.");
+				System.exit(1);
+			}
+		}
+		
 		KAFDocument nafinst = new KAFDocument("","");
 		for (String sId : getSentences().keySet())
 		{
@@ -1069,7 +1084,7 @@ public class CorpusReader {
 			}
 			else
 			{
-				nafinst = NLPpipelineWrapper.ixaPipesTokPos(getSentences().get(sId), lang, posModel, lemmaModel);
+				nafinst = NLPpipelineWrapper.ixaPipesTokPos(getSentences().get(sId), lang, posModel, postagger);
 				//System.err.println(nafinst.toString());
 				//nafinst.print();
 				//System.err.println("corpusReader::tagSentences naf printed.	");

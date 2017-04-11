@@ -27,10 +27,13 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.StringReader;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -48,6 +51,19 @@ import org.jdom2.JDOMException;
  */
 public final class NLPpipelineWrapper {
 	
+	
+	private static final String modelDir = "morph-models-1.5.0";
+	private static final Properties defaultModels = new Properties();
+	static {
+		try {
+			System.err.println(modelDir+File.separator+"morph-models-1.5.0.txt"); 
+			defaultModels.load(NLPpipelineWrapper.class.getClassLoader().getResourceAsStream(modelDir+File.separator+"morph-models-1.5.0.txt"));
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+	}
 	/**
 	 * Processes a given string with the Ixa-pipe tokenizer.
 	 * 
@@ -368,8 +384,8 @@ public final class NLPpipelineWrapper {
 	 */
 	public static Properties setPostaggerProperties(String model, String lemmaModel, String language, String multiwords, String dictag) {
 		Properties props = new Properties();
-		props.setProperty("model", model);
-		props.setProperty("lemmatizerModel", lemmaModel);
+		props.setProperty("model", getXPipeResource(model, language, "pos"));
+		props.setProperty("lemmatizerModel", getXPipeResource(lemmaModel, language, "lemma"));
 		props.setProperty("language", language);
 		//props.setProperty("beamSize", beamSize); @deprecated 
 		//this is a work around for ixa-pipes, because it only allows multiword matching for es and gl.
@@ -394,7 +410,7 @@ public final class NLPpipelineWrapper {
 	 */
 	public static Properties setIxaPipesNERCProperties(String model, String language, String lexer, String dictTag, String dictPath) {
 		Properties annotateProperties = new Properties();
-		annotateProperties.setProperty("model", model);
+		annotateProperties.setProperty("model", getXPipeResource(model, language, "nerc"));
 		annotateProperties.setProperty("language", language);
 		annotateProperties.setProperty("ruleBasedOption", lexer);
 		annotateProperties.setProperty("dictTag", dictTag);
@@ -520,5 +536,38 @@ public final class NLPpipelineWrapper {
 		return 1;
 	}
 	
+	/**
+	 * 
+	 *  Function to get the resource path to pass it to Ixa-pipes. Needed to pass the default lemma and 
+	 *  pos models. In cases where specific models are used instead of the defaults, 
+	 *  this function returns the same input. No IO problems are handled here. 
+	 * @param model
+	 * @param lang [en|es|eu|fr]
+	 * @param type [pos|lemma|nerc]
+	 * @return
+	 */
+	private static String getXPipeResource(String model, String lang, String type){
+		String rsrcStr = "";
+		if (model.equalsIgnoreCase("default"))
+		{
+			String rsrcPath = defaultModels.getProperty(lang+"-"+type);
+			InputStream rsrc = NLPpipelineWrapper.class.getClassLoader().getResourceAsStream((modelDir+File.separator+lang+File.separator+rsrcPath));
+			try {
+				File tempModelFile = File.createTempFile("Ellixa-posModel", Long.toString(System.nanoTime()));
+				tempModelFile.deleteOnExit();
+				System.err.println(lang+"-"+type+" --> "+rsrcPath+" -- "+rsrc+" --- "+tempModelFile.getAbsolutePath());
+				FileUtils.copyInputStreamToFile(rsrc, tempModelFile);
+				return tempModelFile.getAbsolutePath();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				return model;
+			}
+		}
+		else
+		{
+			return model;
+		}
+	}
 	
 }

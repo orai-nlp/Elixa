@@ -332,10 +332,10 @@ public class CLI {
 	public final void loadTagSentParameters()
 	{
 		tagSentParser.addArgument("-m", "--model")
-		.required(false)
+		.setDefault("default")
 		.help("Pass the model to do the tagging as a parameter.\n");
 		tagSentParser.addArgument("-lm", "--lemmaModel")
-		.required(false)
+		.setDefault("default")
 		.help("Pass the model to do the lemmatization as a parameter.\n");
 		tagSentParser.addArgument("-d", "--dir")
 		.required(true)
@@ -527,8 +527,8 @@ public class CLI {
 		Properties params = new Properties();
 		params.load(new FileInputStream(new File(paramFile)));
 
-		String posModelPath = params.getProperty("pos-model");
-		String lemmaModelPath = params.getProperty("lemma-model");
+		String posModelPath = params.getProperty("pos-model", "default");
+		String lemmaModelPath = params.getProperty("lemma-model","default");
 		String kafDir = params.getProperty("kafDir");
 		
 		//Rule-based Classifier.
@@ -706,8 +706,8 @@ public class CLI {
 		Properties params = new Properties();
 		params.load(new FileInputStream(new File(paramFile)));
 
-		String posModelPath = params.getProperty("pos-model");
-		String lemmaModelPath = params.getProperty("lemma-model");
+		String posModelPath = params.getProperty("pos-model", "default");
+		String lemmaModelPath = params.getProperty("lemma-model", "default");
 		String kafDir = params.getProperty("kafDir");
 		
 		
