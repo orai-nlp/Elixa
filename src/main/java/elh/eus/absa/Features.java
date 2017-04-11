@@ -503,7 +503,7 @@ public class Features {
         {
         	if ((params.containsKey("lemmaNgrams") || (params.containsKey("pos") && !params.getProperty("pos").equalsIgnoreCase("0"))))
         	{
-        		if (!eustagger.matcher(params.getProperty("pos-model")).find())
+        		if (!eustagger.matcher(params.getProperty("pos-model","default")).find())
         		{
         			Properties posProp = NLPpipelineWrapper.setPostaggerProperties( params.getProperty("pos-model", "default"), params.getProperty("lemma-model", "default"),
         					corpus.getLang(), "false", "false");					
@@ -936,7 +936,7 @@ public class Features {
         {
         	if ((params.containsKey("lemmaNgrams") || (params.containsKey("pos") && !params.getProperty("pos").equalsIgnoreCase("0"))))
         	{
-        		if (!eustagger.matcher(params.getProperty("pos-model")).find())
+        		if (!eustagger.matcher(params.getProperty("pos-model", "default")).find())
         		{
         			Properties posProp = NLPpipelineWrapper.setPostaggerProperties( params.getProperty("pos-model", "default"), params.getProperty("lemma-model", "default"),
         					corpus.getLang(), "false", "false");					

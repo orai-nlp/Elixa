@@ -1,3 +1,6 @@
+Elixa 0.9.1 (2017/04/11):
+	- Lemma and pos models are now optional. If not specified each languages' default version will be used. Default versions still need to be unpacked in the resources version before executen "mvn clean package" command, an specific model package has been compiled for this purpose. A binary release will include this models in the near future.
+	
 Elixa 0.9 (2017/04/03):
 	- Updated ixa-pipes to the last version (1.5.0)
 	- Included Basque Ixa-pipe (eustagger tagging is still available, if ixa-pipe-pos-eu or eustagger-lite are installed in the system)

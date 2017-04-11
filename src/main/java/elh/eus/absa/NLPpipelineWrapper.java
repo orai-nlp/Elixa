@@ -56,7 +56,7 @@ public final class NLPpipelineWrapper {
 	private static final Properties defaultModels = new Properties();
 	static {
 		try {
-			System.err.println(modelDir+File.separator+"morph-models-1.5.0.txt"); 
+		    //System.err.println(modelDir+File.separator+"morph-models-1.5.0.txt"); 
 			defaultModels.load(NLPpipelineWrapper.class.getClassLoader().getResourceAsStream(modelDir+File.separator+"morph-models-1.5.0.txt"));
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
@@ -555,7 +555,7 @@ public final class NLPpipelineWrapper {
 			try {
 				File tempModelFile = File.createTempFile("Ellixa-posModel", Long.toString(System.nanoTime()));
 				tempModelFile.deleteOnExit();
-				System.err.println(lang+"-"+type+" --> "+rsrcPath+" -- "+rsrc+" --- "+tempModelFile.getAbsolutePath());
+				//System.err.println(lang+"-"+type+" --> "+rsrcPath+" -- "+rsrc+" --- "+tempModelFile.getAbsolutePath());
 				FileUtils.copyInputStreamToFile(rsrc, tempModelFile);
 				return tempModelFile.getAbsolutePath();
 			} catch (IOException e) {
