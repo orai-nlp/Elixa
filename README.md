@@ -158,7 +158,7 @@ This step will create a directory called `target/` which contains various direct
 Most importantly, there you will find the module executable:
 
 ```shell
-elixa-0.9.1.jar
+elixa-0.9.2.jar
 ```
 
 This executable contains every dependency the module needs, so it is completely portable as long
@@ -172,7 +172,7 @@ mvn clean install
 
 ## 7. Test installation
 
-In order to test the Installation, a simple script is provided (test_Elixa.sh). The script will run EliXa and tag the files in the `src/main/resources/examples` folder. The script assumes the executable is in the target directory (`target/elixa-0.9.1.jar`) and that models and their configurations have been unpacked in the installation directory (`./elixa-models-0.9`)
+In order to test the Installation, a simple script is provided (test_Elixa.sh). The script will run EliXa and tag the files in the `src/main/resources/examples` folder. The script assumes the executable is in the target directory (`target/elixa-0.9.2.jar`) and that models and their configurations have been unpacked in the installation directory (`./elixa-models-0.9`)
 
 ```shell
 sh test_Elixa.sh
@@ -211,7 +211,7 @@ Tag-gp command is intended to tag new examples with a pre-existing model. The ex
 
 
 ```shell
-java -jar target/elixa-0.9.1.jar tag-gp -f ireom -m path/to/model/en-twt.model -cn 3 -p path/to/model/en-twt.cfg -l en < input.tab  > output_tagged.txt
+java -jar target/elixa-0.9.2.jar tag-gp -f ireom -m path/to/model/en-twt.model -cn 3 -p path/to/model/en-twt.cfg -l en < input.tab  > output_tagged.txt
  ```
 
 	where:
@@ -226,7 +226,7 @@ java -jar target/elixa-0.9.1.jar tag-gp -f ireom -m path/to/model/en-twt.model -
 For more information on the parameters of the tag-gp command you can type:
 
 ```shell
-java -jar target/elixa-0.9.1.jar tag-gp -h
+java -jar target/elixa-0.9.2.jar tag-gp -h
 ```
 
 ### train-gp
@@ -234,7 +234,7 @@ java -jar target/elixa-0.9.1.jar tag-gp -h
 Train-gp is used to train polarity classification models using a previously tagged data-set. This process can be time consuming depending on the size of the corpus and the features we choose to use.
 
 ```shell
-java -jar target/elixa-0.9.1.jar train-gp -f tabNotagged -cn 3 -l es -p models/es-twt.cfg < ~/corpora/opinion-Datasets/Behagune/es-behagtwtpressUniq.tsv > rslt/es-modTreatment/es-twtBehag201602twtpressUniq-Bsline-Old-NonegFix.rslt
+java -jar target/elixa-0.9.2.jar train-gp -f tabNotagged -cn 3 -l es -p models/es-twt.cfg < ~/corpora/opinion-Datasets/Behagune/es-behagtwtpressUniq.tsv > rslt/es-modTreatment/es-twtBehag201602twtpressUniq-Bsline-Old-NonegFix.rslt
 ```
 
 	where (Parameters are very similar to the tag-gp commands): 
@@ -259,7 +259,7 @@ java -jar target/elixa-0.9.1.jar train-gp -f tabNotagged -cn 3 -l es -p models/e
 
 
 ```shell
-java -jar target/elixa-0.9.1.jar train-gp -h
+java -jar target/elixa-0.9.2.jar train-gp -h
 ```
 
 
@@ -268,7 +268,7 @@ java -jar target/elixa-0.9.1.jar train-gp -h
 eval-gp command is intended to evaluate a previously trained model on a new tagged dataset. The input is a corpus with polarity annotations at document level. eval-gp evaluates the given model against the dataset and outputs evaluation result statistics. Predictions for each document can also be included in the output.
 
 ```shell
-java -jar target/elixa-0.9.1.jar eval-gp -f tabNotagged -cn 3 -l es -p models/es-twt.cfg -m path/es-twt.model < /path/to/input/dataset.tsv > /path/to/evaluation.rslt
+java -jar target/elixa-0.9.2.jar eval-gp -f tabNotagged -cn 3 -l es -p models/es-twt.cfg -m path/es-twt.model < /path/to/input/dataset.tsv > /path/to/evaluation.rslt
 ```
 
 	where:
@@ -284,7 +284,7 @@ The rest of the parameters have the same meaning as in the tag-gp command. For f
 
 
 ```shell
-java -jar target/elixa-0.9.1.jar eval-gp -h
+java -jar target/elixa-0.9.2.jar eval-gp -h
 ```
 
 
@@ -292,7 +292,7 @@ java -jar target/elixa-0.9.1.jar eval-gp -h
 ### tagSentences
 
 ```shell
-java -jar target/elixa-0.9.1.jar tagSentences -d testTag -m absa-models/pos-models/en/en-maxent-100-c5-baseline-dict-penn.bin -l en < input_file.txt
+java -jar target/elixa-0.9.2.jar tagSentences -d testTag -m absa-models/pos-models/en/en-maxent-100-c5-baseline-dict-penn.bin -l en < input_file.txt
  ```
  
 	where:
@@ -303,13 +303,13 @@ java -jar target/elixa-0.9.1.jar tagSentences -d testTag -m absa-models/pos-mode
 For more information you can type: 
 
 ```shell
- java -jar target/elixa-0.9.1.jar tagSentences -h
+ java -jar target/elixa-0.9.2.jar tagSentences -h
 ```
 
 ### tag-naf 
 
 ```shell
- java -jar target/elixa-0.9.1.jar tag-naf -l path/to/lexicon.lex < posTagged_input.naf > SentTagged_output.naf
+ java -jar target/elixa-0.9.2.jar tag-naf -l path/to/lexicon.lex < posTagged_input.naf > SentTagged_output.naf
 ```
 
 	where: 

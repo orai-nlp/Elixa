@@ -26,6 +26,7 @@ import ixa.kaflib.WF;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
@@ -39,6 +40,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.io.FileUtils;
 import org.jdom2.JDOMException;
 import org.jdom2.input.JDOMParseException;
 
@@ -133,7 +135,7 @@ public final class FileUtilsElh {
 	{
 		final File temp;
 
-		temp = File.createTempFile("temp", Long.toString(System.nanoTime()));
+		temp = File.createTempFile("elixa-temp", Long.toString(System.nanoTime()));
 
 		if(!(temp.delete()))
 		{
@@ -449,6 +451,25 @@ public final class FileUtilsElh {
 		{
 			return null;
 		}
+	}
+
+	public static InputStream parseModelArgument (String modelPath, String lang)
+	{
+		if (modelPath.equalsIgnoreCase("default"))
+		{
+			return FileUtilsElh.class.getClassLoader().getResourceAsStream("elixa-models/"+lang+"-twt.model");
+		}
+		else
+		{
+			try {
+				return new FileInputStream(modelPath);
+			}catch (IOException ioe) {
+				// TODO Auto-generated catch block
+				System.err.println("No polarity model loaded. Check that the file exist, "
+						+ "or that the resource was correctly packaged. EliXa will try to extract the features from the corpus.");
+				return null;
+			}
+		} 
 	}
 	
 }

@@ -46,6 +46,7 @@ import net.sourceforge.argparse4j.inf.Namespace;
 import net.sourceforge.argparse4j.inf.Subparser;
 import net.sourceforge.argparse4j.inf.Subparsers;
 
+import org.apache.commons.io.FileUtils;
 import org.jdom2.JDOMException;
 
 import weka.core.Attribute;
@@ -417,12 +418,11 @@ public class CLI {
 		int foldNum = Integer.parseInt(parsedArguments.getString("foldNum"));
 		//boolean printPreds = parsedArguments.getBoolean("printPreds");
 		
-		Properties params = new Properties();			
-		params.load(new FileInputStream(paramFile));
+		Properties params = loadParameters(paramFile, lang);
 		
 		CorpusReader reader = new CorpusReader(inputStream, corpusFormat, lang);
 		System.err.println("trainATP : Corpus read, creating features");
-		Features atpTrain = new Features (reader, paramFile, classes);			
+		Features atpTrain = new Features (reader, params, classes);			
 		Instances traindata;
 		if (corpusFormat.startsWith("tab") && !corpusFormat.equalsIgnoreCase("tabNotagged"))
 		{
@@ -524,8 +524,8 @@ public class CLI {
 		//Read corpus sentences
 		CorpusReader reader = new CorpusReader(inputStream, corpusFormat, lang);
 		
-		Properties params = new Properties();
-		params.load(new FileInputStream(new File(paramFile)));
+		//parameter file
+		Properties params = loadParameters(paramFile, lang);
 
 		String posModelPath = params.getProperty("pos-model", "default");
 		String lemmaModelPath = params.getProperty("lemma-model","default");
@@ -573,7 +573,8 @@ public class CLI {
 		//ML Classifier (default)
 		else
 		{		
-			Features atpTest = new Features (reader, paramFile, classnum, model);
+			model = WekaWrapper.getModelResource(model, lang, "twt");
+			Features atpTest = new Features (reader, params, classnum, model);
 			Instances testdata;
 			if (corpusFormat.startsWith("tab") && !corpusFormat.equalsIgnoreCase("tabNotagged"))
 			{	
@@ -590,10 +591,9 @@ public class CLI {
 			}
 			//	setting class attribute (entCat|attCat|entAttCat|polarityCat)
 			testdata.setClass(testdata.attribute("polarityCat"));
-
-			WekaWrapper classify;		
+		
 			try {
-				classify = new WekaWrapper(model);	
+				WekaWrapper classify = new WekaWrapper(model,lang);	
 
 				System.err.println("evalAtp : going to test the model");
 				//sort according to the instanceId
@@ -703,13 +703,25 @@ public class CLI {
 		//Read corpus sentences
 		CorpusReader reader = new CorpusReader(inputStream, corpusFormat, lang);
 		
-		Properties params = new Properties();
-		params.load(new FileInputStream(new File(paramFile)));
+		Properties params = loadParameters(paramFile, lang);
 
 		String posModelPath = params.getProperty("pos-model", "default");
 		String lemmaModelPath = params.getProperty("lemma-model", "default");
-		String kafDir = params.getProperty("kafDir");
-		
+		String kafDir = params.getProperty("kafDir", "none");
+		if (kafDir.equalsIgnoreCase("none")){
+			final File tempDir = FileUtilsElh.createTempDirectory();
+			Runtime.getRuntime().addShutdownHook(new Thread() {
+			      @Override
+			      public void run() {
+			        /* Delete your file here. */
+			    	FileUtils.deleteQuietly(tempDir);	
+			      }
+			});
+			tempDir.deleteOnExit();
+			kafDir = tempDir.getAbsolutePath();
+			params.setProperty("kafDir", kafDir);	
+			System.err.println("EliXa CLI: tagged files will be created in a temporal folder and deleted after execution - "+kafDir);
+		}
 		
 		//Rule-based Classifier.
 		if (ruleBased) 
@@ -751,8 +763,9 @@ public class CLI {
 			}
 		}
 		else
-		{		
-			Features atpTrain = new Features (reader, paramFile, classnum, model);
+		{	
+			model = WekaWrapper.getModelResource(model, lang, "twt");
+			Features atpTrain = new Features (reader, params, classnum, model);
 			Instances traindata;
 			if (corpusFormat.startsWith("tab") && !corpusFormat.equalsIgnoreCase("tabNotagged"))
 			{
@@ -769,10 +782,9 @@ public class CLI {
 					
 			//	setting class attribute (entCat|attCat|entAttCat|polarityCat)
 			traindata.setClass(traindata.attribute("polarityCat"));
-
-			WekaWrapper classify;		
+	
 			try {
-				classify = new WekaWrapper(model);	
+				WekaWrapper classify = new WekaWrapper(model,lang);	
 
 				System.err.println();
 				//sort according to the instanceId
@@ -824,7 +836,8 @@ public class CLI {
 	 * Create the main parameters available for training ATP models.
 	 */
 	private void loadATPtagParameters() {
-		tagATPParser.addArgument("-p", "--params").required(true)
+		tagATPParser.addArgument("-p", "--params")
+		.setDefault("default")
 		.help("Load the training parameters file\n");
 		tagATPParser.addArgument("-f","--corpusFormat")
 		.required(false)
@@ -832,7 +845,7 @@ public class CLI {
 		.setDefault("semeval2015")
 		.help("Choose format of reference corpus; it defaults to semeval2015 format.\n");
 		tagATPParser.addArgument("-m","--model")		
-		.required(true)
+		.setDefault("default")
 		.help("Pre trained model to classify corpus opinions with. Features are extracted from the model\n");
 		tagATPParser.addArgument("-r","--ruleBasedClassifier")		
 		.action(Arguments.storeTrue())
@@ -904,8 +917,10 @@ public class CLI {
 		//double threshold = 0.2;
 		//String modelsPath = "/home/inaki/Proiektuak/BOM/SEMEVAL2015/ovsaModels";
 		
+		Properties params = loadParameters(paramFile, lang);
+		
 		CorpusReader reader = new CorpusReader(inputStream, corpusFormat, nullSentenceOpinions, lang);
-		Features atcTrain = new Features (reader, paramFile,"3");	
+		Features atcTrain = new Features (reader, params,"3");	
 		Instances traindata = atcTrain.loadInstances(true, "atc");
 		
 		//setting class attribute (entCat|attCat|entAttCat|polarityCat)
@@ -983,8 +998,10 @@ public class CLI {
 		double threshold2 = 0.5;
 		String modelsPath = "/home/inaki/elixa-atp/ovsaModels";
 		
+		Properties params = loadParameters(paramFile, lang);
+
 		CorpusReader reader = new CorpusReader(inputStream, corpusFormat, nullSentenceOpinions, lang);
-		Features atcTrain = new Features (reader, paramFile,"3");		
+		Features atcTrain = new Features (reader, params,"3");		
 		Instances traindata = atcTrain.loadInstances(true, "atc");
 		
 		if (onlyTest)
@@ -1030,7 +1047,9 @@ public class CLI {
 				instOps.put(atcTrain.getOpinInst().get(oId), oId);
 			}
 			
-			atcTrain = new Features (reader, paramFile2,"3");
+			Properties params2 = loadParameters(paramFile2, lang);
+
+			atcTrain = new Features (reader, params2,"3");
 			entdata = atcTrain.loadInstances(true, "attTrain2_data");
 			entdata.deleteAttributeAt(entdata.attribute("entAttCat").index());
 			//entdata.setClassIndex(entdata.attribute("entCat").index());
@@ -1173,9 +1192,11 @@ public class CLI {
 		
 		String modelsPath = "/home/inaki/Proiektuak/BOM/SEMEVAL2015/ovsaModels";
 		
+		Properties params = loadParameters(paramFile, lang);
+
 		
 		CorpusReader reader = new CorpusReader(inputStream, corpusFormat, nullSentenceOpinions, lang);
-		Features atcTrain = new Features (reader, paramFile,"3");
+		Features atcTrain = new Features (reader, params,"3");
 		Instances traindata = atcTrain.loadInstances(true, "atc");
 		
 		if (onlyTest)
@@ -1272,8 +1293,10 @@ public class CLI {
 		int foldNum = Integer.parseInt(parsedArguments.getString("foldNum"));
 		//boolean printPreds = parsedArguments.getBoolean("printPreds");
 		
+		Properties params = loadParameters(paramFile, lang);
+
 		CorpusReader reader = new CorpusReader(inputStream, corpusFormat, lang);
-		Features atcTrain = new Features (reader, paramFile,"3");	
+		Features atcTrain = new Features (reader, params,"3");	
 		Instances traindata = atcTrain.loadInstances(true, "atc");
 		
 		//setting class attribute (entCat|attCat|entAttCat|polarityCat)
@@ -1454,7 +1477,51 @@ public class CLI {
 	}
 	
 	
-	
+	/**
+	 *  Function load the parameter file into a Properties object
+	 * 
+	 * @param String paramFile : Path to the file containing the feature configuration file 
+	 *                            (which features should be used)
+	 */
+	private Properties loadParameters (String paramFile,String lang)
+	{
+		Properties params = new Properties();
+		if (paramFile.equalsIgnoreCase("default"))
+		{
+			Properties defaultParams = new Properties();
+			try {
+			    //System.err.println(modelDir+File.separator+"morph-models-1.5.0.txt"); 
+				defaultParams.load(this.getClass().getClassLoader().getResourceAsStream("elixa-models"+File.separator+"elixa-models.txt"));
+			} catch (Exception e) {
+				System.err.println("No default polarity models found. EliXa will only be able to tag polarity with user especified models");
+				//e.printStackTrace();
+			}
+			paramFile="elixa-models"+File.separator+defaultParams.getProperty(lang+"-twt", "")+".cfg";
+			
+			try {
+				params.load(this.getClass().getClassLoader().getResourceAsStream(paramFile));
+			} catch (IOException e) {
+				System.err.println("Default polarity model could not be loaded. EliXa will only be able to tag polarity with user especified models");
+			}
+		}
+		else
+		{
+			File pfile = new File(paramFile);
+			if (FileUtilsElh.checkFile(pfile))
+			{
+				try {
+					params.load(new FileInputStream(pfile));				
+				}
+				catch (IOException ioe){
+					System.err.println("Features: given parameter file ("+paramFile+") is not a valid file.");
+					System.exit(1);				
+				}
+			}
+		}
+		
+		return params;
+		
+	}
 
 	
 }

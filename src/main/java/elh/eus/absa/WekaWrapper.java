@@ -20,10 +20,16 @@ This file is part of EliXa.
 package elh.eus.absa;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.Properties;
 import java.util.Random;
+
+import org.apache.commons.io.FileUtils;
 
 import weka.classifiers.Classifier;
 import weka.classifiers.Evaluation;
@@ -40,14 +46,28 @@ public class WekaWrapper {
 	private Instances testdata;
 	private Classifier MLclass;
 
+	private static final String modelDir = "elixa-models";
+	private static final Properties defaultModels = new Properties();
+	static {
+		try {
+		    //System.err.println(modelDir+File.separator+"morph-models-1.5.0.txt"); 
+			defaultModels.load(WekaWrapper.class.getClassLoader().getResourceAsStream(modelDir+File.separator+"elixa-models.txt"));
+		} catch (Exception e) {
+			System.err.println("No default polarity models found. EliXa will only be able to tag polarity with user especified models");
+			//e.printStackTrace();
+		}
+		
+	}
+	
 	/**
-	 * @param traindata
-	 * @param id : whether the first attribute represents de instance id and should be filtered out for classifying
+	 * @param model path (InputStream containing the serialized model)
+	 * WARNING: the input stream is closed by WEKA after reading it. 
+	 * 
 	 * @throws Exception
 	 */
-	public WekaWrapper (String modelPath) throws Exception
+	public WekaWrapper (String modelPath, String lang) throws Exception
 	{		
-		setMLclass(loadModel(modelPath));
+		setMLclass(loadModel(getModelResource(modelPath, lang, "twt")));
 	}
 	
 	/**
@@ -124,6 +144,12 @@ public class WekaWrapper {
 		return this.MLclass;
 	}
 	
+	
+	/**
+	 * Perform cross validation evaluation of the classifier with the given number of folds.
+	 * @param foldNum
+	 * @throws Exception
+	 */
 	public void crossValidate(int foldNum) throws Exception
 	{
 		System.out.println("WekaWrapper: "+foldNum+"-fold cross validation over train data.");
@@ -160,10 +186,10 @@ public class WekaWrapper {
 	 * Loads the model stored in the given file and evaluates it against the current test data. 
 	 * The void returns and error if no test data is presents.  
 	 * 
-	 * @param modelPath
+	 * @param model
 	 * @throws Exception 
 	 */
-	public void testModel(String modelPath) throws Exception
+	public void testModel(String model) throws Exception
 	{
 		if ((testdata == null) || testdata.isEmpty())
 		{
@@ -172,14 +198,14 @@ public class WekaWrapper {
 		}
 		
 		// check model file
-		if (! FileUtilsElh.checkFile(modelPath))
-		{
-			System.err.println("WekaWrapper: testModel() - model couldn't be loaded");
-			System.exit(8);
-		}
+		//if (! FileUtilsElh.checkFile(modelPath))
+		//{
+		//	System.err.println("WekaWrapper: testModel() - model couldn't be loaded");
+		//	System.exit(8);
+		//}
 
 		// deserialize model
-		this.MLclass = (Classifier) weka.core.SerializationHelper.readAll(modelPath)[0];		
+		this.MLclass = (Classifier) weka.core.SerializationHelper.readAll(model)[0];		
 		System.err.println("WekaWrapper: testModel() - Classifier ready.");
 				
 		Evaluation eTest = new Evaluation(this.testdata);
@@ -190,7 +216,7 @@ public class WekaWrapper {
 	}
 
 	/**
-	 * Loads the model stored in the given file returns it.  
+	 * Loads the model stored in the given file and returns it.  
 	 * 
 	 * @param modelPath
 	 * @return
@@ -198,13 +224,6 @@ public class WekaWrapper {
 	 */
 	public Classifier loadModel(String modelPath) throws Exception
 	{
-		// check model file
-		if (! FileUtilsElh.checkFile(modelPath))
-		{
-			System.err.println("WekaWrapper: loadModel() - model couldn't be loaded : "+modelPath);
-			System.exit(8);
-		}
-
 		System.err.println("WekaWrapper: loadModel() - model: "+modelPath);
 		// deserialize model
 		Object object_ser[] = weka.core.SerializationHelper.readAll(modelPath);
@@ -219,17 +238,10 @@ public class WekaWrapper {
 	 * @return
 	 * @throws Exception
 	 */
-	public Instances loadHeader(String modelPath) throws Exception
+	public Instances loadHeader(String model) throws Exception
 	{
-		// check model file
-		if (! FileUtilsElh.checkFile(modelPath))
-		{
-			System.err.println("WekaWrapper: loadHeader() - model file couldn't be read : "+modelPath);
-			System.exit(8);
-		}
-
 		// deserialize model
-		Object object_ser[] = weka.core.SerializationHelper.readAll(modelPath);
+		Object object_ser[] = weka.core.SerializationHelper.readAll(model);
 		return (Instances) object_ser[1];		
 		//System.err.println("WekaWrapper: loadModel() - Classifier ready.");				      
 	}
@@ -607,5 +619,39 @@ public class WekaWrapper {
 				
 		return rslt;	
 	}
-
+	
+	/**
+	 * 
+	 *  Function to get the resource path to pass it to Ixa-pipes. Needed to pass the default lemma and 
+	 *  pos models. In cases where specific models are used instead of the defaults, 
+	 *  this function returns the same input. No IO problems are handled here. 
+	 * @param model
+	 * @param lang [en|es|eu|fr]
+	 * @param type [twt|...]
+	 * @return
+	 */
+	public static String getModelResource(String model, String lang, String type){
+		String rsrcStr = "";
+		if (model.equalsIgnoreCase("default"))
+		{
+			String rsrcPath = defaultModels.getProperty(lang+"-"+type);
+			InputStream rsrc = WekaWrapper.class.getClassLoader().getResourceAsStream((modelDir+File.separator+rsrcPath+".model"));
+			try {
+				File tempModelFile = File.createTempFile("Elixa-Polarity-Model", Long.toString(System.nanoTime()));
+				tempModelFile.deleteOnExit();
+				System.err.println(lang+"-"+type+" --> "+rsrcPath+" -- "+rsrc+" --- "+tempModelFile.getAbsolutePath());
+				FileUtils.copyInputStreamToFile(rsrc, tempModelFile);
+				return tempModelFile.getAbsolutePath();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				System.err.println("EliXa::WekaWrapper - Error when loading default model for language "+lang+". Execution will probably end badly.");
+				//e.printStackTrace();
+				return model;
+			}
+		}
+		else
+		{
+			return model;
+		}
+	}
 }

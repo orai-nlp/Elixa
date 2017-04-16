@@ -206,9 +206,9 @@ public class Features {
 	 * @param String paramFile : Path to the file containing the feature configuration file 
 	 *                            (which features should be used)
 	 */
-	public Features (InputStream ins, String lang, String format, String paramFile, String classes)
+	public Features (InputStream ins, String lang, String format, Properties params2, String classes)
 	{
-		this(new CorpusReader(ins, format, lang), paramFile, classes);
+		this(new CorpusReader(ins, format, lang), params2, classes);
 	}
 	
 
@@ -218,47 +218,29 @@ public class Features {
 	 * @param String paramFile : Path to the file containing the feature configuration file 
 	 *                            (which features should be used)
 	 */
-	public Features (CorpusReader creader, String paramFile, String classes)
-	{
-		//System.err.println("Features: constructor call");	
+	public Features(CorpusReader creader, Properties params2, String classes) {
+		// System.err.println("Features: constructor call");
 		this.corpus = creader;
 		this.featNum = 0;
 		setClasses(classes);
-		File pfile = new File(paramFile);
-		if (FileUtilsElh.checkFile(pfile))
-		{
-			try {
-				params.load(new FileInputStream(pfile));
-				String norm = params.getProperty("normalization", "none") ;
-				//preprocess
-				if (norm.matches("(?i)(all|noHashtag)"))
-				{
-					MicrotxtNormalizer = new MicroTextNormalizer(corpus.getLang());
-					MicrotxtNormalizer.setEmodict(this.getClass().getClassLoader().getResourceAsStream("emoticons.lex"));
-				}
-				else if (norm.compareTo("none")!=0)
-				{
-					 MicrotxtNormalizer =  new MicroTextNormalizer(corpus.getLang());
-				}
-				
-				//stopword list to rule out function words or too frequent works. 
-				if (params.containsKey("stopwords"))
-				{
-					setStopwords(this.getClass().getClassLoader().getResourceAsStream(corpus.getLang()+"/stopwords.txt"));			
-				}
+		params = params2;
+		String norm = params.getProperty("normalization", "none");
+		// preprocess
+		if (norm.matches("(?i)(all|noHashtag)")) {
+			MicrotxtNormalizer = new MicroTextNormalizer(corpus.getLang());
+			MicrotxtNormalizer.setEmodict(this.getClass().getClassLoader().getResourceAsStream("emoticons.lex"));
+		} else if (norm.compareTo("none") != 0) {
+			MicrotxtNormalizer = new MicroTextNormalizer(corpus.getLang());
+		}
 
-				//System.err.println("Features: initiate feature extraction from corpus");	
-				createFeatureSet();
-			} catch (IOException e) {
-				System.err.println("Features: error when loading training parameter properties");				
-				e.printStackTrace();
-			}
+		// stopword list to rule out function words or too frequent works.
+		if (params.containsKey("stopwords")) {
+			setStopwords(this.getClass().getClassLoader().getResourceAsStream(corpus.getLang() + "/stopwords.txt"));
 		}
-		else 
-		{
-			System.err.println("Features: given parameter file ("+paramFile+") is not a valid file.");
-			System.exit(1);
-		}
+
+		// System.err.println("Features: initiate feature extraction from
+		// corpus");
+		createFeatureSet();
 	}
 	
 	
@@ -268,52 +250,39 @@ public class Features {
 	 * @param String paramFile : Path to the file containing the feature configuration file 
 	 *                            (which features should be used)
 	 */
-	public Features (CorpusReader creader, String paramFile, String classes, String modelPath)
+	public Features (CorpusReader creader, Properties paramFile, String classes, String modelPath)
 	{
 		this.corpus = creader;
 		this.featNum = 0;
 		setClasses(classes);
-		File pfile = new File(paramFile);
-		if (FileUtilsElh.checkFile(pfile))
+		params=paramFile;
+
+		String norm = params.getProperty("normalization", "none") ;
+		//preprocess
+		if (norm.matches("(?i)(all|noHashtag)"))
 		{
-			try {
-				params.load(new FileInputStream(pfile));
-				String norm = params.getProperty("normalization", "none") ;
-				//preprocess
-				if (norm.matches("(?i)(all|noHashtag)"))
-				{
-					MicrotxtNormalizer = new MicroTextNormalizer(corpus.getLang());
-					MicrotxtNormalizer.setEmodict(this.getClass().getClassLoader().getResourceAsStream("emoticons.lex"));					 
-				}
-				else if (norm.compareTo("none")!=0)
-				{
-					MicrotxtNormalizer = new MicroTextNormalizer(corpus.getLang());
-				}
-				
-				//stopword list to rule out function words or too frequent works.
-				if (params.containsKey("stopwords"))
-				{
-					setStopwords(this.getClass().getClassLoader().getResourceAsStream(corpus.getLang()+"/stopWords.txt"));			
-				}
-				
-				if (FileUtilsElh.checkFile(modelPath))
-				{
-					createFeatureSetFromModel(modelPath);
-				}
-				else
-				{
-					System.err.println("Features: initiate feature extraction from corpus");	
-					createFeatureSet();
-				}
-			} catch (IOException e) {
-				System.err.println("Features: error when loading training parameter properties");				
-				e.printStackTrace();
-			}
+			MicrotxtNormalizer = new MicroTextNormalizer(corpus.getLang());
+			MicrotxtNormalizer.setEmodict(this.getClass().getClassLoader().getResourceAsStream("emoticons.lex"));					 
 		}
-		else 
+		else if (norm.compareTo("none")!=0)
 		{
-			System.err.println("Features: given parameter file ("+paramFile+") is not a valid file.");
-			System.exit(1);
+			MicrotxtNormalizer = new MicroTextNormalizer(corpus.getLang());
+		}
+				
+		//stopword list to rule out function words or too frequent works.
+		if (params.containsKey("stopwords"))
+		{
+			setStopwords(this.getClass().getClassLoader().getResourceAsStream(corpus.getLang()+"/stopWords.txt"));			
+		}
+		
+		if (FileUtilsElh.checkFile(modelPath))
+		{
+			createFeatureSetFromModel(modelPath);
+		}
+		else
+		{
+			System.err.println("Features: initiate feature extraction from corpus");	
+			createFeatureSet();
 		}
 	}
 	
@@ -383,7 +352,7 @@ public class Features {
 	{
 		try
 		{
-			WekaWrapper ww = new WekaWrapper(model);
+			WekaWrapper ww = new WekaWrapper(model, corpus.getLang());
 			Instances header = ww.loadHeader(model);
 			
 			int attNum = header.numAttributes();

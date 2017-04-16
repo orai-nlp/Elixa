@@ -33,6 +33,7 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Properties;
 import java.util.regex.Matcher;
@@ -68,10 +69,10 @@ import org.jdom2.xpath.XPathFactory;
 public class CorpusReader {
 
 	// polarities for each opinion are stored here.
-	private HashMap<String, String> sentences = new HashMap<String, String>();
-	private HashMap<String, List<String>> sentOps = new HashMap<String, List<String>>();
-	private HashMap<String, Opinion> opinions = new HashMap<String, Opinion>();
-	private HashMap<String, List<String>> revSents = new HashMap<String, List<String>>();
+	private HashMap<String, String> sentences = new LinkedHashMap<String, String>();
+	private HashMap<String, List<String>> sentOps = new LinkedHashMap<String, List<String>>();
+	private HashMap<String, Opinion> opinions = new LinkedHashMap<String, Opinion>();
+	private HashMap<String, List<String>> revSents = new LinkedHashMap<String, List<String>>();
 	//corpus language	
 	private String lang;
 	//corpus format	(semeval2014|semeval2015|tab|tabglobal)

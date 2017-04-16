@@ -59,8 +59,8 @@ public final class NLPpipelineWrapper {
 		    //System.err.println(modelDir+File.separator+"morph-models-1.5.0.txt"); 
 			defaultModels.load(NLPpipelineWrapper.class.getClassLoader().getResourceAsStream(modelDir+File.separator+"morph-models-1.5.0.txt"));
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			System.err.println("No default pos tagging models found. EliXa will only be able to pos tag with user especified models");
+			//e.printStackTrace();
 		}
 		
 	}
@@ -553,7 +553,7 @@ public final class NLPpipelineWrapper {
 			String rsrcPath = defaultModels.getProperty(lang+"-"+type);
 			InputStream rsrc = NLPpipelineWrapper.class.getClassLoader().getResourceAsStream((modelDir+File.separator+lang+File.separator+rsrcPath));
 			try {
-				File tempModelFile = File.createTempFile("Ellixa-posModel", Long.toString(System.nanoTime()));
+				File tempModelFile = File.createTempFile("Elixa-posModel", Long.toString(System.nanoTime()));
 				tempModelFile.deleteOnExit();
 				//System.err.println(lang+"-"+type+" --> "+rsrcPath+" -- "+rsrc+" --- "+tempModelFile.getAbsolutePath());
 				FileUtils.copyInputStreamToFile(rsrc, tempModelFile);
