@@ -419,6 +419,24 @@ public class CLI {
 		//boolean printPreds = parsedArguments.getBoolean("printPreds");
 		
 		Properties params = loadParameters(paramFile, lang);
+		String kafDir = params.getProperty("kafDir", "none");
+		if (kafDir.equalsIgnoreCase("none")){
+			final File tempDir = FileUtilsElh.createTempDirectory();
+			Runtime.getRuntime().addShutdownHook(new Thread() {
+			      @Override
+			      public void run() {
+			        /* Delete your file here. */
+			    	FileUtils.deleteQuietly(tempDir);	
+			      }
+			});			
+			kafDir = tempDir.getAbsolutePath();
+			params.setProperty("kafDir", kafDir);	
+			System.err.println("EliXa CLI: tagged files will be created in a temporal folder and deleted after execution - "+kafDir+""
+					+ "\n This may slow down your trainings if you are training over the same data-set several times."
+					+ " You may want to declare a static tagged files folder (kafDir=\"/path/to/tag/files/\") in the config file"
+					+ "if you are not changing tagging related features (e.g., normalization, wf vs. lemma ngrams).");
+		}
+		
 		
 		CorpusReader reader = new CorpusReader(inputStream, corpusFormat, lang);
 		System.err.println("trainATP : Corpus read, creating features");
@@ -529,7 +547,23 @@ public class CLI {
 
 		String posModelPath = params.getProperty("pos-model", "default");
 		String lemmaModelPath = params.getProperty("lemma-model","default");
-		String kafDir = params.getProperty("kafDir");
+		String kafDir = params.getProperty("kafDir", "none");
+		if (kafDir.equalsIgnoreCase("none")){
+			final File tempDir = FileUtilsElh.createTempDirectory();
+			Runtime.getRuntime().addShutdownHook(new Thread() {
+			      @Override
+			      public void run() {
+			        /* Delete your file here. */
+			    	FileUtils.deleteQuietly(tempDir);	
+			      }
+			});			
+			kafDir = tempDir.getAbsolutePath();
+			params.setProperty("kafDir", kafDir);	
+			System.err.println("EliXa CLI: tagged files will be created in a temporal folder and deleted after execution - "+kafDir+""
+					+ "\n This may slow down your tests if you are evaluating over the same test set several times."
+					+ " You may want to declare a static tagged files folder (kafDir=\"/path/to/tag/files/\") in the config file"
+					+ "if you are not changed tagging related features (e.g., normalization, wf vs. lemma ngrams).");
+		}
 		
 		//Rule-based Classifier.
 		if (ruleBased) 
@@ -716,8 +750,7 @@ public class CLI {
 			        /* Delete your file here. */
 			    	FileUtils.deleteQuietly(tempDir);	
 			      }
-			});
-			tempDir.deleteOnExit();
+			});			
 			kafDir = tempDir.getAbsolutePath();
 			params.setProperty("kafDir", kafDir);	
 			System.err.println("EliXa CLI: tagged files will be created in a temporal folder and deleted after execution - "+kafDir);

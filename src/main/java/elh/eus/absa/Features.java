@@ -442,7 +442,7 @@ public class Features {
 		try{
 			// create pos tagging dir if not exists
 			Files.createDirectories(Paths.get(nafDir));
-		}catch(IOException ioe){
+		}catch(Exception ioe){
 			System.err.println("Features::CreateFeatureSet error when creating pos tagging folder "+nafDir);
 		}
 		
@@ -740,13 +740,14 @@ public class Features {
 		
 		// Category vector extracted from training set opinions
 		TreeSet<String>[] categoryInfo = new TreeSet[3];
-		if (! params.getProperty("categories", "no").equalsIgnoreCase("no"))
+		String cats = params.getProperty("categories", "no");
+		if (! cats.equalsIgnoreCase("no"))
 		{
 			categoryInfo = extractCategories();
 		}
 		
-		// Two separated features characterize the category infor: entity (E) and attribute (A)
-		if (params.getProperty("categories", "no").equalsIgnoreCase("E&A"))
+		// Two separated features characterize the category info: entity (E) and attribute (A)
+		if (cats.equalsIgnoreCase("E&A"))
 		{
 			// Declare Nominal attribute for entity category	
 			ArrayList<String> entVal = new ArrayList<String>(categoryInfo[0]);
@@ -764,7 +765,7 @@ public class Features {
 			addNominalFeature("entAttCat", entAttVal);*/
 		}		
 		// Category as a whole
-		else if (params.getProperty("categories","no").equalsIgnoreCase("E#A"))
+		else if (cats.equalsIgnoreCase("E#A"))
 		{
 
 			// Declare Nominal attribute for category as a whole
