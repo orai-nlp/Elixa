@@ -59,7 +59,7 @@ public final class NLPpipelineWrapper {
 		    //System.err.println(modelDir+File.separator+"morph-models-1.5.0.txt"); 
 			defaultModels.load(NLPpipelineWrapper.class.getClassLoader().getResourceAsStream(modelDir+File.separator+"morph-models-1.5.0.txt"));
 		} catch (IOException e) {
-			System.err.println("No default pos tagging models found. EliXa will only be able to pos tag with user especified models");
+			System.err.println("WARNING: No default pos tagging models found. EliXa will only be able to pos tag with user especified models");
 			//e.printStackTrace();
 		}
 		

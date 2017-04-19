@@ -214,9 +214,10 @@ public class Features {
 
 	/**
 	 *  Constructor
-	 * @param Corpus reader creader : An already existing corpus reader object. 
+	 * @param CorpusReader creader : An already existing corpus reader object. 
 	 * @param String paramFile : Path to the file containing the feature configuration file 
 	 *                            (which features should be used)
+	 * @param String classes : Number of classes to classify                           
 	 */
 	public Features(CorpusReader creader, Properties params2, String classes) {
 		// System.err.println("Features: constructor call");
@@ -249,6 +250,8 @@ public class Features {
 	 * @param Corpus reader creader : An already existing corpus reader object. 
 	 * @param String paramFile : Path to the file containing the feature configuration file 
 	 *                            (which features should be used)
+	 * @param String classes : Number of classes to classify
+	 * @param String modelPath : Path to the polarity classification model  
 	 */
 	public Features (CorpusReader creader, Properties paramFile, String classes, String modelPath)
 	{
@@ -381,26 +384,24 @@ public class Features {
 			//General polarity lexicon
 			if (header.attribute("polLexGen_posScore")!=null)
 			{
-				this.polarLexiconGen = new Lexicon(new File(params.getProperty("polarLexiconGeneral")),"lemma");
+				String lexPath = params.getProperty("polarLexiconGeneral");
+				this.polarLexiconGen = new Lexicon(new File(lexPath),"lemma");
 				System.err.println("Features : createFeatureSetFromModel() - General polarity lexicon loaded -> "
-						+params.getProperty("polarLexiconGeneral")
-						+" ("+this.polarLexiconGen.size()+" entries)");
+						+lexPath+" ("+this.polarLexiconGen.size()+" entries)");
 				System.out.println("Features : createFeatureSetFromModel() - General polarity lexicon loaded -> "
-						+params.getProperty("polarLexiconGeneral")
-						+" ("+this.polarLexiconGen.size()+" entries)");
+						+lexPath+" ("+this.polarLexiconGen.size()+" entries)");
 			}
 			
 			//Domain polarity lexicon
 			if (header.attribute("polLexDom_posScore")!=null)
 			{
 				//this.polarLexiconDom = loadPolarityLexiconFromFile(params.getProperty("polarLexiconDomain"), "polLexDom_");
-				this.polarLexiconDom = new Lexicon(new File(params.getProperty("polarLexiconDomain")),"lemma");
+				String lexPath = params.getProperty("polarLexiconDomain");
+				this.polarLexiconDom = new Lexicon(new File(lexPath),"lemma");
 				System.err.println("Features : createFeatureSetFromModel() - Domain polarity lexicon loaded -> "
-						+params.getProperty("polarLexiconDomain")
-						+" ("+this.polarLexiconDom.size()+" entries)");
+						+lexPath+" ("+this.polarLexiconDom.size()+" entries)");
 				System.out.println("Features : createFeatureSetFromModel() - Domain polarity lexicon loaded -> "
-						+params.getProperty("polarLexiconDomain")
-						+" ("+this.polarLexiconDom.size()+" entries)");	
+						+lexPath+" ("+this.polarLexiconDom.size()+" entries)");	
 			}
 			
 			
@@ -466,15 +467,17 @@ public class Features {
 		}
 
 		Set<String> corpSentenceIds = corpus.getSentences().keySet();
+
+		String posModel=params.getProperty("pos-model","default");
 		
 		//Corpus tagging, if the corpus is not in conll tabulated format
         if (corpus.getFormat().equalsIgnoreCase("tabNotagged") || !corpus.getFormat().startsWith("tab"))
         {
-        	if ((params.containsKey("lemmaNgrams") || (params.containsKey("pos") && !params.getProperty("pos").equalsIgnoreCase("0"))))
+        	if (params.containsKey("lemmaNgrams") || !params.getProperty("pos","0").equalsIgnoreCase("0"))
         	{
-        		if (!eustagger.matcher(params.getProperty("pos-model","default")).find())
+        		if (!eustagger.matcher(posModel).find())
         		{
-        			Properties posProp = NLPpipelineWrapper.setPostaggerProperties( params.getProperty("pos-model", "default"), params.getProperty("lemma-model", "default"),
+        			Properties posProp = NLPpipelineWrapper.setPostaggerProperties(posModel, params.getProperty("lemma-model", "default"),
         					corpus.getLang(), "false", "false");					
         			try {
 						postagger = new eus.ixa.ixa.pipe.pos.Annotate(posProp);
@@ -525,16 +528,13 @@ public class Features {
 		if (params.containsKey("wfngrams"))
 		{	
 			// Min frequency for word form ngrams
-			if (params.containsKey("wfMinFreq"))
-			{
-				try {
-					wfMinFreq = Integer.parseInt(params.getProperty("wfMinFreq"));
-				}
-				catch (NumberFormatException nfe){
-					System.err.println("Features::createFeatureSet() - provided word form minimum frequency "
-							+ "is not an integer. Default value 1 will be used");
-				}				
-			}			
+			try {
+				wfMinFreq = Integer.parseInt(params.getProperty("wfMinFreq", "1"));
+			}
+			catch (NumberFormatException nfe){
+				System.err.println("Features::createFeatureSet() - provided word form minimum frequency "
+						+ "is not an integer. Default value 1 will be used");
+			}				
 			
 			File test = new File(params.getProperty("wfngrams"));
 			// If the word form ngram list is stored in a file.
@@ -568,7 +568,7 @@ public class Features {
 					try {
 						KAFDocument naf = KAFDocument.createFromFile(new File(nafPath));
 						// N-gram Feature vector : extracted from sentences
-						int success = extractWfNgramsKAF(Integer.valueOf(params.getProperty("wfngrams")), naf, true);
+						int success = extractWfNgramsKAF(wfNgramsLength, naf, true);
 					} catch (IOException ioe){
 						System.err.println("Features::createFeatureSet -> error when reading naf for sentence "+key+" opinions for the sentence will be deleted from training set");
 						corpus.removeSentenceOpinions(key);
@@ -587,16 +587,13 @@ public class Features {
 		if (params.containsKey("lemmaNgrams"))
 		{	
 			// Min frequency for word form ngrams
-			if (params.containsKey("lemmaMinFreq"))
-			{
-				try {
-					lemmaMinFreq = Integer.parseInt(params.getProperty("lemmaMinFreq"));
-				}
-				catch (NumberFormatException nfe){
-					System.err.println("Features::createFeatureSet() - provided lemma minimum frequency "
-							+ "is not an integer. Default value 1 will be used");
-				}				
+			try {
+				lemmaMinFreq = Integer.parseInt(params.getProperty("lemmaMinFreq", "1"));
 			}
+			catch (NumberFormatException nfe){
+				System.err.println("Features::createFeatureSet() - provided lemma minimum frequency "
+						+ "is not an integer. Default value 1 will be used");
+			}				
 			
 			featPos = this.featNum;
 			File test = new File(params.getProperty("lemmaNgrams"));
@@ -640,7 +637,7 @@ public class Features {
 						try {
 							naf = KAFDocument.createFromFile(naffile);
 							// N-gram Feature vector : extracted from sentences
-							int success = extractLemmaNgrams(Integer.valueOf(params.getProperty("lemmaNgrams")), naf, discardPos, true);
+							int success = extractLemmaNgrams(lemmaNgramsLength, naf, discardPos, true);
 						} catch (IOException e) {
 							System.err.println("Features::createFeatureSet -> error when reading naf for sentence "+key+" opinions for the sentence will be deleted from training set");
 							e.printStackTrace();							
@@ -656,11 +653,12 @@ public class Features {
 			System.err.println("Features : createFeatureSet() - lemma ngram features -> "+(this.featNum-featPos));
 		}
 
+		String postagParam = params.getProperty("pos", "0");
 		// pos tag features
-		if (params.containsKey("pos") && !params.getProperty("pos").equalsIgnoreCase("0"))
+		if (!postagParam.equalsIgnoreCase("0"))
 		{	
 			featPos = this.featNum;
-			File test = new File(params.getProperty("pos"));
+			File test = new File(postagParam);
 			String conll ="";
 			// if POS ngrams are stored in a file
 			if (test.isFile())
@@ -671,13 +669,13 @@ public class Features {
 			else if (corpus.getFormat().startsWith("tab") && !corpus.getFormat().equalsIgnoreCase("tabNotagged"))
 			{
 				// N-gram Feature vector : extracted from sentences
-				int success = extractNgramsTAB(Integer.valueOf(params.getProperty("pos")), "pos", discardPos, true);
+				int success = extractNgramsTAB(Integer.valueOf(postagParam), "pos", discardPos, true);
 				addNumericFeatureSet("", POSNgrams, 1);
 			}
 			// Otherwise  use previously tagged files with ixa-pipes 
 			else
 			{
-				int posNgramLength= Integer.valueOf(params.getProperty("pos"));
+				int posNgramLength= Integer.valueOf(postagParam);
 				int tagFails=0;
 				System.err.println("Features::createFeatureSet -> pos ngram extraction ("+posNgramLength+"-grams)...");
 				for (String key : corpSentenceIds)
@@ -701,7 +699,7 @@ public class Features {
 						try {
 							KAFDocument naf = KAFDocument.createFromFile(nafFile);
 							// N-gram Feature vector : extracted from sentences
-							int success = extractPosNgrams(Integer.valueOf(params.getProperty("pos")), naf, discardPos, true);
+							int success = extractPosNgrams(Integer.valueOf(postagParam), naf, discardPos, true);
 						} catch (IOException ioe){
 							System.err.println("Features::createFeatureSet -> error when reading naf for sentence "+key+" opinions for the sentence will be deleted from training set");
 							corpus.removeSentenceOpinions(key);
@@ -825,7 +823,7 @@ public class Features {
 					+params.getProperty("polarLexiconDomain")
 					+" ("+this.polarLexiconDom.size()+" entries)");		
 			
-			if (params.containsKey("polNgrams") && !params.getProperty("polNgrams").equalsIgnoreCase("no"))
+			if (!params.getProperty("polNgrams","no").equalsIgnoreCase("no"))
 			{
 				for (String s : this.polarLexiconDom.getEntrySet())
 				{
@@ -849,7 +847,7 @@ public class Features {
 		
 		
 		// if polarity is activated in the parameter file look for
-		if (params.containsKey("polarity") && params.getProperty("polarity").equalsIgnoreCase("yes"))
+		if (params.getProperty("polarity","no").equalsIgnoreCase("yes"))
 		{
 			// Declare the class attribute along with its values			
 			addNominalFeature("polarityCat", this.ClassificationClasses);			
@@ -901,14 +899,15 @@ public class Features {
 			savePath = savePath+"_w"+bowWin;		
 		}
 		
+		String posModel = params.getProperty("pos-model", "default");
 		//Corpus tagging, if the corpus is not in conll tabulated format
         if (corpus.getFormat().equalsIgnoreCase("tabNotagged") || !corpus.getFormat().startsWith("tab"))
         {
-        	if ((params.containsKey("lemmaNgrams") || (params.containsKey("pos") && !params.getProperty("pos").equalsIgnoreCase("0"))))
+        	if (params.containsKey("lemmaNgrams") || (!params.getProperty("pos","0").equalsIgnoreCase("0")))
         	{
-        		if (!eustagger.matcher(params.getProperty("pos-model", "default")).find())
+        		if (!eustagger.matcher(posModel).find())
         		{
-        			Properties posProp = NLPpipelineWrapper.setPostaggerProperties( params.getProperty("pos-model", "default"), params.getProperty("lemma-model", "default"),
+        			Properties posProp = NLPpipelineWrapper.setPostaggerProperties(posModel, params.getProperty("lemma-model", "default"),
         					corpus.getLang(), "false", "false");					
         			try {
 						postagger = new eus.ixa.ixa.pipe.pos.Annotate(posProp);
@@ -1014,17 +1013,13 @@ public class Features {
 			LinkedList<String> ngrams = new LinkedList<String>();
 			int ngramDim;
 			try {
-				ngramDim = Integer.valueOf(params.getProperty("wfngrams"));			
+				ngramDim = Integer.valueOf(params.getProperty("wfngrams","0"));			
 			} catch (Exception e){
 				ngramDim = 0;
 			}
 			
-			boolean polNgrams=false;
-			if (params.containsKey("polNgrams"))
-			{
-				polNgrams=params.getProperty("polNgrams").equalsIgnoreCase("yes");
-			}
-			
+			boolean polNgrams=params.getProperty("polNgrams","no").equalsIgnoreCase("yes");
+						
 			
 			List<WF> window = nafinst.getWFs();
 			Integer end = corpus.getOpinion(oId).getTo();

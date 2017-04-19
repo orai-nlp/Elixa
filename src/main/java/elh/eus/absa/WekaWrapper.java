@@ -53,7 +53,7 @@ public class WekaWrapper {
 		    //System.err.println(modelDir+File.separator+"morph-models-1.5.0.txt"); 
 			defaultModels.load(WekaWrapper.class.getClassLoader().getResourceAsStream(modelDir+File.separator+"elixa-models.txt"));
 		} catch (Exception e) {
-			System.err.println("No default polarity models found. EliXa will only be able to tag polarity with user especified models");
+			System.err.println("WARNING: No default polarity models found. EliXa will only be able to tag polarity with user especified models");
 			//e.printStackTrace();
 		}
 		

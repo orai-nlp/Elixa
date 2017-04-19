@@ -435,7 +435,10 @@ public class CorpusReader {
 				}
 			}
 		} catch (JDOMException | IOException e) {
-			e.printStackTrace();
+			System.err.println("EliXa::CorpusReader - Could not extract opinions from corpus (semeval2015 format)."
+					+ "\n\t Make sure the corpus is correctly formatted, and if so pass the correct format in the -f argument."
+					+ "\n\t If you are already doing that the file can't be read for some other reason");
+			//e.printStackTrace();
 		}
 	}
 
@@ -544,7 +547,10 @@ public class CorpusReader {
 				}
 			}
 		} catch (JDOMException | IOException e) {
-			e.printStackTrace();
+			System.err.println("EliXa::CorpusReader - Could not extract opinions from corpus (semeval2015 format)."
+					+ "\n\t Make sure the corpus is correctly formatted, and if so pass the correct format in the -f argument."
+					+ "\n\t If you are already doing that the file can't be read for some other reason");
+			//e.printStackTrace();
 		}
 	}		
 
@@ -601,7 +607,10 @@ public class CorpusReader {
 			}
 			//System.out.println(sentString);			
 		} catch (JDOMException | IOException e) {
-			e.printStackTrace();
+			System.err.println("EliXa::CorpusReader - Could not extract opinions from corpus (conll format)."
+					+ "\n\t Make sure the corpus is correctly formatted, and if so pass the correct format in the -f argument."
+					+ "\n\t If you are already doing that the file can't be read for some other reason");
+			//e.printStackTrace();
 		}
 	}
 	
