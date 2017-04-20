@@ -431,7 +431,7 @@ public class CLI {
 			});			
 			kafDir = tempDir.getAbsolutePath();
 			params.setProperty("kafDir", kafDir);	
-			System.err.println("EliXa CLI: tagged files will be created in a temporal folder and deleted after execution - "+kafDir+""
+			System.err.println("EliXa CLI: tagged files will be created in a temporal folder and deleted after execution."
 					+ "\n This may slow down your trainings if you are training over the same data-set several times."
 					+ " You may want to declare a static tagged files folder (kafDir=\"/path/to/tag/files/\") in the config file"
 					+ "if you are not changing tagging related features (e.g., normalization, wf vs. lemma ngrams).");
@@ -559,7 +559,7 @@ public class CLI {
 			});			
 			kafDir = tempDir.getAbsolutePath();
 			params.setProperty("kafDir", kafDir);	
-			System.err.println("EliXa CLI: tagged files will be created in a temporal folder and deleted after execution - "+kafDir+""
+			System.err.println("EliXa CLI: tagged files will be created in a temporal folder and deleted after execution."
 					+ "\n This may slow down your tests if you are evaluating over the same test set several times."
 					+ " You may want to declare a static tagged files folder (kafDir=\"/path/to/tag/files/\") in the config file"
 					+ "if you are not changed tagging related features (e.g., normalization, wf vs. lemma ngrams).");
@@ -753,7 +753,7 @@ public class CLI {
 			});			
 			kafDir = tempDir.getAbsolutePath();
 			params.setProperty("kafDir", kafDir);	
-			System.err.println("EliXa CLI: tagged files will be created in a temporal folder and deleted after execution - "+kafDir);
+			System.err.println("EliXa CLI: tagged files will be created in a temporal folder and deleted after execution.");
 		}
 		
 		//Rule-based Classifier.
@@ -1526,15 +1526,21 @@ public class CLI {
 			    //System.err.println(modelDir+File.separator+"morph-models-1.5.0.txt"); 
 				defaultParams.load(this.getClass().getClassLoader().getResourceAsStream("elixa-models"+File.separator+"elixa-models.txt"));
 			} catch (Exception e) {
-				System.err.println("No default polarity models found. EliXa will only be able to tag polarity with user especified models");
+				System.err.println("ERROR: No parameter file was especified, and no default polarity models found. "
+						+ "\nPlease especify a parameter file (-p option). EliXa will only be able to tag polarity with user especified models");
 				//e.printStackTrace();
+				System.exit(1);
+				return params;
 			}
 			paramFile="elixa-models"+File.separator+defaultParams.getProperty(lang+"-twt", "")+".cfg";
 			
 			try {
 				params.load(this.getClass().getClassLoader().getResourceAsStream(paramFile));
 			} catch (IOException e) {
-				System.err.println("Default polarity model could not be loaded. EliXa will only be able to tag polarity with user especified models");
+				System.err.println("ERROR: Default configuration file for the selected language polarity model could not be loaded."
+						+ "\n EliXa will only be able to tag polarity with user especified models");
+				System.exit(1);
+
 			}
 		}
 		else

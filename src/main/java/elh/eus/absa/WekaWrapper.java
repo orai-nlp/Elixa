@@ -634,18 +634,19 @@ public class WekaWrapper {
 		String rsrcStr = "";
 		if (model.equalsIgnoreCase("default"))
 		{
-			String rsrcPath = defaultModels.getProperty(lang+"-"+type);
-			InputStream rsrc = WekaWrapper.class.getClassLoader().getResourceAsStream((modelDir+File.separator+rsrcPath+".model"));
 			try {
+				String rsrcPath = defaultModels.getProperty(lang+"-"+type);
+				InputStream rsrc = WekaWrapper.class.getClassLoader().getResourceAsStream((modelDir+File.separator+rsrcPath+".model"));
+				
 				File tempModelFile = File.createTempFile("Elixa-Polarity-Model", Long.toString(System.nanoTime()));
 				tempModelFile.deleteOnExit();
-				System.err.println(lang+"-"+type+" --> "+rsrcPath+" -- "+rsrc+" --- "+tempModelFile.getAbsolutePath());
+				//System.err.println(lang+"-"+type+" --> "+rsrcPath+" -- "+rsrc+" --- "+tempModelFile.getAbsolutePath());
 				FileUtils.copyInputStreamToFile(rsrc, tempModelFile);
 				return tempModelFile.getAbsolutePath();
-			} catch (IOException e) {
+			} catch (Exception e) {
 				// TODO Auto-generated catch block
-				System.err.println("EliXa::WekaWrapper - Error when loading default model for language "+lang+". Execution will probably end badly.");
-				//e.printStackTrace();
+				System.err.println("ERROR: EliXa::WekaWrapper - No model was provided and default model for language "+lang+" could not be loaded. Execution can not continue.");
+				System.exit(1);//e.printStackTrace();
 				return model;
 			}
 		}

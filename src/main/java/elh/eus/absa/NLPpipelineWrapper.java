@@ -58,8 +58,9 @@ public final class NLPpipelineWrapper {
 		try {
 		    //System.err.println(modelDir+File.separator+"morph-models-1.5.0.txt"); 
 			defaultModels.load(NLPpipelineWrapper.class.getClassLoader().getResourceAsStream(modelDir+File.separator+"morph-models-1.5.0.txt"));
-		} catch (IOException e) {
-			System.err.println("WARNING: No default pos tagging models found. EliXa will only be able to pos tag with user especified models");
+		} catch (Exception e) {
+			System.err.println("WARNING: No default pos tagging models found."
+					+ " EliXa will only be able to pos tag with user especified models. Especify them by defining 'pos-model' and 'lemma-model' variables in the configuration file.");
 			//e.printStackTrace();
 		}
 		
@@ -550,17 +551,20 @@ public final class NLPpipelineWrapper {
 		String rsrcStr = "";
 		if (model.equalsIgnoreCase("default"))
 		{
-			String rsrcPath = defaultModels.getProperty(lang+"-"+type);
-			InputStream rsrc = NLPpipelineWrapper.class.getClassLoader().getResourceAsStream((modelDir+File.separator+lang+File.separator+rsrcPath));
 			try {
+				String rsrcPath = defaultModels.getProperty(lang+"-"+type);
+				InputStream rsrc = NLPpipelineWrapper.class.getClassLoader().getResourceAsStream((modelDir+File.separator+lang+File.separator+rsrcPath));
+
 				File tempModelFile = File.createTempFile("Elixa-posModel", Long.toString(System.nanoTime()));
 				tempModelFile.deleteOnExit();
 				//System.err.println(lang+"-"+type+" --> "+rsrcPath+" -- "+rsrc+" --- "+tempModelFile.getAbsolutePath());
 				FileUtils.copyInputStreamToFile(rsrc, tempModelFile);
 				return tempModelFile.getAbsolutePath();
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+			} catch (Exception e) {
+				System.err.println("ERROR: No PoS tagging model was defined and no default model could be loaded. Execution can not continue."
+						+ " Especify the pos-tagging models by defining 'pos-model' and 'lemma-model' variables in the configuration file.");
+				//e.printStackTrace();
+				System.exit(1);
 				return model;
 			}
 		}
