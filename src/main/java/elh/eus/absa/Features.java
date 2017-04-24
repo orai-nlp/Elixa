@@ -275,7 +275,7 @@ public class Features {
 		//stopword list to rule out function words or too frequent works.
 		if (params.containsKey("stopwords"))
 		{
-			setStopwords(this.getClass().getClassLoader().getResourceAsStream(corpus.getLang()+"/stopWords.txt"));			
+			setStopwords(this.getClass().getClassLoader().getResourceAsStream(corpus.getLang()+"/stopwords.txt"));			
 		}
 		
 		if (FileUtilsElh.checkFile(modelPath))

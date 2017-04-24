@@ -472,4 +472,22 @@ public final class FileUtilsElh {
 		} 
 	}
 	
+	
+	public static String getElixaResource (InputStream rsrc, String prefix){
+		String result="";
+		try {
+			File tempRsrcFile = File.createTempFile(prefix, Long.toString(System.nanoTime()));
+			tempRsrcFile.deleteOnExit();
+			//System.err.println(lang+"-"+type+" --> "+rsrcPath+" -- "+rsrc+" --- "+tempModelFile.getAbsolutePath());
+			FileUtils.copyInputStreamToFile(rsrc, tempRsrcFile);
+			return tempRsrcFile.getAbsolutePath();
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			System.err.println("ERROR: EliXa::FileUtilsElh - Resource was could not be loaded. "
+					+ "Execution may end with errors.");
+			System.exit(1);//e.printStackTrace();		
+			return result;
+		}		
+	}
+	
 }

@@ -565,6 +565,9 @@ public class CLI {
 					+ "if you are not changed tagging related features (e.g., normalization, wf vs. lemma ngrams).");
 		}
 		
+		String lexiconDom = params.getProperty("polarLexiconDomain","none");
+		String lexiconGen = params.getProperty("polarLexiconGeneral","default");
+		String lex = lexiconDom;
 		//Rule-based Classifier.
 		if (ruleBased) 
 		{		
@@ -573,14 +576,15 @@ public class CLI {
 			 * If no domain lexicon is found it reverts to general polarity lexicon.
 			 * If no general polarity lexicon is found program exits with error message.
 			*/
-			String lex = params.getProperty("polarLexiconDomain","none");
 			if (lex.equalsIgnoreCase("none"))
 			{
-				lex = params.getProperty("polarLexiconGeneral","none");
-				if (lex.equalsIgnoreCase("none"))
+				lex = lexiconGen;
+				if (lex.equalsIgnoreCase("default"))
 				{
+					//this.getClass().getClassLoader().getResourceAsStream(lang+File.separator+"elixa-models.txt");
 					System.err.println("Elixa Error :: Rule-based classifier is selected but no polarity"
-							+ " lexicon has been specified. Either specify one or choose ML classifier");
+							+ " lexicon has been specified. No default lexicon could be loaded neither."
+							+ " Either specify one or choose ML classifier");
 					System.exit(1);
 				}
 			}			
