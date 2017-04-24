@@ -446,7 +446,7 @@ public class CLI {
 		{
 			traindata = atpTrain.loadInstancesConll(true, "atp",false);
 		}
-		else if (lang.equalsIgnoreCase("eu") && params.getProperty("pos-model").contains("eustagger"))
+		else if (lang.equalsIgnoreCase("eu") && params.getProperty("pos-model","default").contains("eustagger"))
 		{
 			traindata = atpTrain.loadInstancesConll(true, "atp",true);			
 		}
