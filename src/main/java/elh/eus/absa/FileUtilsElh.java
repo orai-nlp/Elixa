@@ -484,8 +484,7 @@ public final class FileUtilsElh {
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			System.err.println("ERROR: EliXa::FileUtilsElh - Resource was could not be loaded. "
-					+ "Execution may end with errors.");
-			System.exit(1);//e.printStackTrace();		
+					+ "Execution may end with errors.");			
 			return result;
 		}		
 	}
