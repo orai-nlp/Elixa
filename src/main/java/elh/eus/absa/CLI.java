@@ -126,6 +126,19 @@ public class CLI {
 	private Subparser predictParser;
 	
 	
+	/**
+	 * Default polarity lexicon names. 
+	 * 2017/04/25: for the moment, this values are hard coded because lexicons are not given standard names
+	 * or provided with its own property file. In the future one of the two alternatives should be provided.
+	 */
+	private final static Properties defaultLexicons = new Properties();
+	static {
+		defaultLexicons.setProperty("en", "en-union_restrictNew.lex");
+		defaultLexicons.setProperty("eu", "ElhPolar_euLLR.lex");
+		defaultLexicons.setProperty("es", "ElhPolarMoodmap.lex");
+		defaultLexicons.setProperty("fr", "FEEL-fr.lex");
+	}
+	
 
 	/**
 	 * Construct a CLI object with the three sub-parsers to manage the command
@@ -419,24 +432,8 @@ public class CLI {
 		//boolean printPreds = parsedArguments.getBoolean("printPreds");
 		
 		Properties params = loadParameters(paramFile, lang);
-		String kafDir = params.getProperty("kafDir", "none");
-		if (kafDir.equalsIgnoreCase("none")){
-			final File tempDir = FileUtilsElh.createTempDirectory();
-			Runtime.getRuntime().addShutdownHook(new Thread() {
-			      @Override
-			      public void run() {
-			        /* Delete your file here. */
-			    	FileUtils.deleteQuietly(tempDir);	
-			      }
-			});			
-			kafDir = tempDir.getAbsolutePath();
-			params.setProperty("kafDir", kafDir);	
-			System.err.println("EliXa CLI: tagged files will be created in a temporal folder and deleted after execution."
-					+ "\n This may slow down your trainings if you are training over the same data-set several times."
-					+ " You may want to declare a static tagged files folder (kafDir=\"/path/to/tag/files/\") in the config file"
-					+ "if you are not changing tagging related features (e.g., normalization, wf vs. lemma ngrams).");
-		}
-		
+		String kafDir = setPoStaggingFolder(params,"train");
+				
 		
 		CorpusReader reader = new CorpusReader(inputStream, corpusFormat, lang);
 		System.err.println("trainATP : Corpus read, creating features");
@@ -547,27 +544,19 @@ public class CLI {
 
 		String posModelPath = params.getProperty("pos-model", "default");
 		String lemmaModelPath = params.getProperty("lemma-model","default");
-		String kafDir = params.getProperty("kafDir", "none");
-		if (kafDir.equalsIgnoreCase("none")){
-			final File tempDir = FileUtilsElh.createTempDirectory();
-			Runtime.getRuntime().addShutdownHook(new Thread() {
-			      @Override
-			      public void run() {
-			        /* Delete your file here. */
-			    	FileUtils.deleteQuietly(tempDir);	
-			      }
-			});			
-			kafDir = tempDir.getAbsolutePath();
-			params.setProperty("kafDir", kafDir);	
-			System.err.println("EliXa CLI: tagged files will be created in a temporal folder and deleted after execution."
-					+ "\n This may slow down your tests if you are evaluating over the same test set several times."
-					+ " You may want to declare a static tagged files folder (kafDir=\"/path/to/tag/files/\") in the config file"
-					+ "if you are not changed tagging related features (e.g., normalization, wf vs. lemma ngrams).");
-		}
+		String kafDir = setPoStaggingFolder(params, "eval");
 		
+		//polarity lexicon
 		String lexiconDom = params.getProperty("polarLexiconDomain","none");
 		String lexiconGen = params.getProperty("polarLexiconGeneral","default");
-		String lex = lexiconDom;
+		if (lexiconGen.equalsIgnoreCase("default"))
+		{
+			InputStream lexRsrc =  this.getClass().getClassLoader().getResourceAsStream(lang+File.separator+defaultLexicons.getProperty(lang));
+			lexiconGen = FileUtilsElh.getElixaResource(lexRsrc,"elixa-lexicon");
+			params.setProperty("polarLexiconGeneral",lexiconGen);
+			System.err.println(params.getProperty("polarityLexiconGeneral", "kkkkk"));
+		}
+		
 		//Rule-based Classifier.
 		if (ruleBased) 
 		{		
@@ -576,20 +565,16 @@ public class CLI {
 			 * If no domain lexicon is found it reverts to general polarity lexicon.
 			 * If no general polarity lexicon is found program exits with error message.
 			*/
+			String lex = lexiconDom;
 			if (lex.equalsIgnoreCase("none"))
 			{
 				lex = lexiconGen;
-				if (lex.equalsIgnoreCase("default"))
+				if (lex.equalsIgnoreCase("none"))
 				{
-					InputStream lexRsrc =  this.getClass().getClassLoader().getResourceAsStream(lang+File.separator+lang+".lex");
-					lex = FileUtilsElh.getElixaResource(lexRsrc,"elixa-lexicon");
-					if (lex.equalsIgnoreCase("none"))
-					{
-						System.err.println("Elixa Error :: Rule-based classifier is selected but no polarity"
+					System.err.println("Elixa Error :: Rule-based classifier is selected but no polarity"
 							+ " lexicon has been specified. No default lexicon could be loaded neither."
 							+ " Either specify one or choose ML classifier");
-						System.exit(1);
-					}
+					System.exit(1);					
 				}
 			}			
 			File lexFile = new File(lex);			
@@ -688,10 +673,11 @@ public class CLI {
 	 * Create the main parameters available for training ATP models.
 	 */
 	private void loadATPevalParameters() {
-		evalATPParser.addArgument("-p", "--params").required(true)
+		evalATPParser.addArgument("-p", "--params")
+		.setDefault("default")
 		.help("Load the training parameters file\n");
 		evalATPParser.addArgument("-m", "--model")
-		.required(true)
+		.setDefault("default")
 		.help("The pretrained model we want to test.\n");
 		//evalATPParser.addArgument("-t", "--testset")
 		//.required(false)
@@ -749,25 +735,18 @@ public class CLI {
 
 		String posModelPath = params.getProperty("pos-model", "default");
 		String lemmaModelPath = params.getProperty("lemma-model", "default");
-		String kafDir = params.getProperty("kafDir", "none");
-		if (kafDir.equalsIgnoreCase("none")){
-			final File tempDir = FileUtilsElh.createTempDirectory();
-			Runtime.getRuntime().addShutdownHook(new Thread() {
-			      @Override
-			      public void run() {
-			        /* Delete your file here. */
-			    	FileUtils.deleteQuietly(tempDir);	
-			      }
-			});			
-			kafDir = tempDir.getAbsolutePath();
-			params.setProperty("kafDir", kafDir);	
-			System.err.println("EliXa CLI: tagged files will be created in a temporal folder and deleted after execution.");
-		}
+		String kafDir = setPoStaggingFolder(params, "tag");
 		
+		// polarity lexicons	
 		String lexiconDom = params.getProperty("polarLexiconDomain","none");
-		String lexiconGen = params.getProperty("polarLexiconGeneral","default");
-		String lex = lexiconDom;
-		
+		String lexiconGen = params.getProperty("polarLexiconGeneral","default");		
+		if (lexiconGen.equalsIgnoreCase("default"))
+		{
+			InputStream lexRsrc =  this.getClass().getClassLoader().getResourceAsStream(lang+File.separator+defaultLexicons.getProperty(lang));
+			lexiconGen = FileUtilsElh.getElixaResource(lexRsrc,"elixa-lexicon");
+			params.setProperty("polarLexiconGeneral",lexiconGen);
+			System.err.println(params.getProperty("polarityLexiconGeneral", "kkkkk"));
+		}
 		//Rule-based Classifier.
 		if (ruleBased) 
 		{		
@@ -775,22 +754,17 @@ public class CLI {
 			/* polarity lexicon. Domain specific polarity lexicon is given priority.
 			 * If no domain lexicon is found it reverts to general polarity lexicon.
 			 * If no general polarity lexicon is found program exits with error message.
-			*/
-			lex = params.getProperty("polarLexiconDomain","none");
+			*/			
+			String lex = lexiconDom;
 			if (lex.equalsIgnoreCase("none"))
 			{
 				lex = lexiconGen;
-				if (lex.equalsIgnoreCase("default"))
+				if (lex.equalsIgnoreCase("none"))
 				{
-					InputStream lexRsrc =  this.getClass().getClassLoader().getResourceAsStream(lang+File.separator+lang+".lex");
-					lex = FileUtilsElh.getElixaResource(lexRsrc,"elixa-lexicon");
-					if (lex.equalsIgnoreCase("none"))
-					{
-						System.err.println("Elixa Error :: Rule-based classifier is selected but no polarity"
+					System.err.println("Elixa Error :: Rule-based classifier is selected but no polarity"
 							+ " lexicon has been specified. No default lexicon could be loaded neither."
 							+ " Either specify one or choose ML classifier");
-						System.exit(1);
-					}
+					System.exit(1);					
 				}
 			}			
 			File lexFile = new File(lex);			
@@ -1528,6 +1502,12 @@ public class CLI {
 	}
 	
 	
+	
+	
+/*
+ *  FROM NOW ON HELPING FUNCTIONS 
+ * */	
+	
 	/**
 	 *  Function load the parameter file into a Properties object
 	 * 
@@ -1578,6 +1558,40 @@ public class CLI {
 		
 		return params;
 		
+	}
+
+	private String setPoStaggingFolder(Properties params, String functionality) throws IOException {
+		String kafDir = params.getProperty("kafDir", "none");
+		if (kafDir.equalsIgnoreCase("none")){
+			final File tempDir = FileUtilsElh.createTempDirectory();
+			Runtime.getRuntime().addShutdownHook(new Thread() {
+			      @Override
+			      public void run() {
+			        /* Delete your file here. */
+			    	FileUtils.deleteQuietly(tempDir);	
+			      }
+			});			
+			kafDir = tempDir.getAbsolutePath();
+			params.setProperty("kafDir", kafDir);
+			switch (functionality)
+			{
+			case "train":
+				System.err.println("EliXa CLI: tagged files will be created in a temporal folder and deleted after execution."
+					+ "\n This may slow down your trainings if you are training over the same data-set several times."
+					+ " You may want to declare a static tagged files folder (kafDir=\"/path/to/tag/files/\") in the config file"
+					+ "if you are not changing tagging related features (e.g., normalization, wf vs. lemma ngrams).");				
+				break;
+			case "eval":
+				System.err.println("EliXa CLI: tagged files will be created in a temporal folder and deleted after execution."
+						+ "\n This may slow down your tests if you are evaluating over the same test set several times."
+						+ " You may want to declare a static tagged files folder (kafDir=\"/path/to/tag/files/\") in the config file"
+						+ "if you are not changed tagging related features (e.g., normalization, wf vs. lemma ngrams).");								
+				break;
+			case "default":
+				System.err.println("EliXa CLI: tagged files will be created in a temporal folder and deleted after execution.");								
+			}
+		}
+		return kafDir;
 	}
 
 	

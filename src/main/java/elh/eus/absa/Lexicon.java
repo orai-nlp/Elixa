@@ -322,7 +322,7 @@ public class Lexicon {
 			loadLexicon(fname, syn);
 		} catch (IOException e) {
 			System.err.println("Lexicon class: error when loading lexicon from file: "+fname);
-			e.printStackTrace();
+			//e.printStackTrace();
 		}
 	}
 	

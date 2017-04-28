@@ -474,7 +474,7 @@ public final class FileUtilsElh {
 	
 	
 	public static String getElixaResource (InputStream rsrc, String prefix){
-		String result="";
+		String result="none";
 		try {
 			File tempRsrcFile = File.createTempFile(prefix, Long.toString(System.nanoTime()));
 			tempRsrcFile.deleteOnExit();
