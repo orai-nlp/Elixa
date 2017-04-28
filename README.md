@@ -121,13 +121,13 @@ tar -xzvf morph-models-1.5.0.tar.gz -C src/main/resources
 
 
 EliXa may use several language specific resources, such as polarity lexicons and other resources for text normalization. We currently provide such resources for 4 languages; Basque (eu), Spanish (es), English (en) and French (fr). 
-You can get the resources from http://komunitatea.elhuyar.eus/ig/files/2017/04/elixa-resources_0.9.tgz and unpack them in the src/main/resources directory
+You can get the resources from http://komunitatea.elhuyar.eus/ig/files/2017/04/elixa-resources-0.9.tgz and unpack them in the src/main/resources directory
 
 ```shell
 cd elixa
-wget http://komunitatea.elhuyar.eus/ig/files/2017/04/elixa-resources_0.9.tgz
+wget http://komunitatea.elhuyar.eus/ig/files/2017/04/elixa-resources-0.9.tgz
 cd src/main/resources
-tar -xzvf elixa-resources_0.8.tgz
+tar -xzvf elixa-resources-0.9.tgz
 ```
 
 We also provide basic polarity classification models for the previous languages. Models have been trained over Twitter data in the context of the [Behagunea](behagunea.dss2016.eu) project. Data is specific on the topic "San Sebastian 2016 Cultural Capital of Europe". 
