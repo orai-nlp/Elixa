@@ -388,8 +388,8 @@ public class Features {
 				this.polarLexiconGen = new Lexicon(new File(lexPath),"lemma");
 				System.err.println("Features : createFeatureSetFromModel() - General polarity lexicon loaded -> "
 						+lexPath+" ("+this.polarLexiconGen.size()+" entries)");
-				System.out.println("Features : createFeatureSetFromModel() - General polarity lexicon loaded -> "
-						+lexPath+" ("+this.polarLexiconGen.size()+" entries)");
+				//System.out.println("Features : createFeatureSetFromModel() - General polarity lexicon loaded -> "
+				//		+lexPath+" ("+this.polarLexiconGen.size()+" entries)");
 			}
 			
 			//Domain polarity lexicon
@@ -400,8 +400,8 @@ public class Features {
 				this.polarLexiconDom = new Lexicon(new File(lexPath),"lemma");
 				System.err.println("Features : createFeatureSetFromModel() - Domain polarity lexicon loaded -> "
 						+lexPath+" ("+this.polarLexiconDom.size()+" entries)");
-				System.out.println("Features : createFeatureSetFromModel() - Domain polarity lexicon loaded -> "
-						+lexPath+" ("+this.polarLexiconDom.size()+" entries)");	
+				//System.out.println("Features : createFeatureSetFromModel() - Domain polarity lexicon loaded -> "
+				//		+lexPath+" ("+this.polarLexiconDom.size()+" entries)");	
 			}
 			
 			
@@ -928,7 +928,7 @@ public class Features {
         //traindata.setClassIndex(traindata.numAttributes() - 1);
 		
 		System.err.println("Features: loadInstances() - featNum: "+this.featNum+" - trainset attrib num -> "+rsltdata.numAttributes()+" - ");
-		System.out.println("Features: loadInstances() - featNum: "+this.featNum+" - trainset attrib num -> "+rsltdata.numAttributes()+" - ");
+		//System.out.println("Features: loadInstances() - featNum: "+this.featNum+" - trainset attrib num -> "+rsltdata.numAttributes()+" - ");
 		
 		int instId = 1;
 		// fill the vectors for each training example
@@ -1333,7 +1333,7 @@ public class Features {
         //traindata.setClassIndex(traindata.numAttributes() - 1);
 		
 		System.err.println("Features: loadInstancesConll() - featNum: "+this.featNum+" - trainset attrib num -> "+rsltdata.numAttributes()+" - ");
-		System.out.println("Features: loadInstancesConll() - featNum: "+this.featNum+" - trainset attrib num -> "+rsltdata.numAttributes()+" - ");
+		//System.out.println("Features: loadInstancesConll() - featNum: "+this.featNum+" - trainset attrib num -> "+rsltdata.numAttributes()+" - ");
 				
 		int instId = 1;
 		// fill the vectors for each training example

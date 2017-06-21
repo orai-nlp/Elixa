@@ -554,7 +554,7 @@ public class CLI {
 			InputStream lexRsrc =  this.getClass().getClassLoader().getResourceAsStream(lang+File.separator+defaultLexicons.getProperty(lang));
 			lexiconGen = FileUtilsElh.getElixaResource(lexRsrc,"elixa-lexicon");
 			params.setProperty("polarLexiconGeneral",lexiconGen);
-			System.err.println(params.getProperty("polarityLexiconGeneral", "kkkkk"));
+			System.err.println(params.getProperty("polarityLexiconGeneral", "WARN: No general polarity lexicon"));
 		}
 		
 		//Rule-based Classifier.
@@ -745,7 +745,7 @@ public class CLI {
 			InputStream lexRsrc =  this.getClass().getClassLoader().getResourceAsStream(lang+File.separator+defaultLexicons.getProperty(lang));
 			lexiconGen = FileUtilsElh.getElixaResource(lexRsrc,"elixa-lexicon");
 			params.setProperty("polarLexiconGeneral",lexiconGen);
-			System.err.println(params.getProperty("polarityLexiconGeneral", "kkkkk"));
+			System.err.println(params.getProperty("polarityLexiconGeneral", "WARN: No general polarity lexicon"));
 		}
 		//Rule-based Classifier.
 		if (ruleBased) 
