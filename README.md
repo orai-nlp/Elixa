@@ -16,7 +16,7 @@ The contents of the module are the following:
 
 # INSTALLATION
 
-IMPORTANT NOTE: if you only want to try elixa or use it as it is just download the [latest release](https://github.com/Elhuyar/Elixa/releases/download/v0.9.2/elixa-0.9.2-full.jar) and go directly to ["Using Elixa"](https://github.com/Elhuyar/Elixa#using-elixa) the section of this README. Java JRE>=1.7 is required to run Elixa. 
+IMPORTANT NOTE: if you only want to try EliXa or use it as it is just download the [latest release](https://github.com/Elhuyar/Elixa/releases/download/v0.9.2/elixa-0.9.2-full.jar) and go directly to ["Using EliXa"](https://github.com/Elhuyar/Elixa#using-elixa) the section of this README. Java JRE>=1.7 is required to run EliXa. 
 
 Installing EliXa requires the following steps:
 
