@@ -996,7 +996,7 @@ public class Features {
 				} else {
 					try {
 						nafinst = KAFDocument.createFromFile(new File(nafPath));
-					} catch (IOException ioe) {
+					} catch (IOException ioe ) {
 						System.err.println("Features::createFeatureSet -> error when reading naf for opinion " + oId
 								+ " opinion will be deleted from training set");
 						it.remove();
@@ -1004,7 +1004,15 @@ public class Features {
 						continue;
 					}
 				}
-				tokNum = nafinst.getWFs().size();
+				try {
+					tokNum = nafinst.getWFs().size();
+				}catch(NullPointerException ne){
+					System.err.println("Features::loadInstances -> error when reading naf for opinion (seems naf JDOM error) " + oId
+							+ " opinion will be deleted from training set");
+					it.remove();
+					tagFails++;
+					continue;
+				}
 				// System.err.println("Features::loadInstances - postagging
 				// opinion sentence ("+oId+") -
 				// "+corpus.getOpinionSentence(oId));
