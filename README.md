@@ -16,11 +16,11 @@ The contents of the module are the following:
 
 # INSTALLATION
 
-IMPORTANT NOTE: if you only want to try EliXa or use it as it is just download the [latest release](https://github.com/Elhuyar/Elixa/releases/download/v0.9.2/elixa-0.9.2-full.jar) and go directly to ["Using EliXa"](https://github.com/Elhuyar/Elixa#using-elixa) the section of this README. Java JRE>=1.7 is required to run EliXa, although 1.8 is recommended. 
+IMPORTANT NOTE: if you only want to try EliXa or use it as it is, just download the [latest release](https://github.com/Elhuyar/Elixa/releases/download/v0.9.2/elixa-0.9.2-full.jar) and go directly to ["Using EliXa"](https://github.com/Elhuyar/Elixa#using-elixa) section of this README. Java JRE>=1.7 is required to run EliXa, although JRE 1.8 is recommended. 
 
 Installing EliXa requires the following steps:
 
-If you already have installed in your machine JDK7 and MAVEN 3, please go to step 3
+If you already have installed in your machine JDK8 and MAVEN 3, please go to step 3
 directly. Otherwise, follow these steps:
 
 ## 1. Install JDK 1.8
@@ -51,8 +51,8 @@ IMPORTANT NOTE: EliXa is compatible with JDK 1.7. However, we have found problem
 
  ```org.jdom2.input.JDOMParseException: Error on line x of document file:/example/path/example.kaf: An invalid XML character (Unicode: 0xd83d) was found in the comment```
 
-We tracked the possible source of the problem to this problem: https://bugs.openjdk.java.net/browse/JDK-8072081 , referenced here: https://github.com/ixa-ehu/ixa-pipe-nerc/issues/10 . In our case this happens with ixa-pip-pos library. 
-From our test, it seems using an up to date JDK 1.8 is safe, so we recommend to use it over JDK1.7, specially if you are going to process tweets or social media messages.
+We tracked the possible source of the problem to this bug report: https://bugs.openjdk.java.net/browse/JDK-8072081, also referenced here: https://github.com/ixa-ehu/ixa-pipe-nerc/issues/10 . In our case this happens with ixa-pipe-pos library. 
+From our tests, it seems using an up to date JDK 1.8 is safe, so we recommend to use it over JDK1.7, specially if you are going to process tweets or social media messages.
 
 
 ## 2. Install MAVEN 3
