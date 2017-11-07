@@ -23,20 +23,19 @@ Installing EliXa requires the following steps:
 If you already have installed in your machine JDK7 and MAVEN 3, please go to step 3
 directly. Otherwise, follow these steps:
 
-## 1. Install JDK 1.7
+## 1. Install JDK 1.8
 
-
-If you do not install JDK 1.7 in a default location, you will probably need to configure the PATH in .bashrc or .bash_profile:
+If you do not install JDK 1.8 in a default location, you will probably need to configure the PATH in .bashrc or .bash_profile:
 
 ```shell
-export JAVA_HOME=/yourpath/local/java17
+export JAVA_HOME=/yourpath/local/java18
 export PATH=${JAVA_HOME}/bin:${PATH}
 ```
 
 If you use tcsh you will need to specify it in your .login as follows:
 
 ```shell
-setenv JAVA_HOME /usr/java/java17
+setenv JAVA_HOME /usr/java/java18
 setenv PATH ${JAVA_HOME}/bin:${PATH}
 ```
 
@@ -46,7 +45,11 @@ If you re-login into your shell and run the command
 java -version
 ```
 
-You should now see that your jdk is 1.7
+You should now see that your JDK is 1.8
+
+IMPORTANT NOTE: EliXa is compatible with JDK 1.7. However, we have found problems when processing NAF files (the xml format used internally by EliXA) containing Emojis, which arise errors such as:
+ ```org.jdom2.input.JDOMParseException: Error on line x of document file:/example/path/example.kaf: An invalid XML character (Unicode: 0xd83d) was found in the comment``` . We tracked the possible source of the problem to this one. It seems using JDK 1.8 is safe, so we recommend to use it over JDK1.7, specially if you are going to process tweets or social media messages.
+
 
 ## 2. Install MAVEN 3
 
