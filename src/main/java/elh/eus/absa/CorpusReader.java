@@ -51,7 +51,7 @@ import javax.xml.transform.stream.StreamResult;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.StringEscapeUtils;
+import org.apache.commons.text.StringEscapeUtils;
 import org.jdom2.Document;
 import org.jdom2.Element;
 import org.jdom2.JDOMException;
@@ -376,7 +376,7 @@ public class CorpusReader {
 	 * @param sentences the sentences to set
 	 */
 	public void addSentence(String id, String text) {
-		this.sentences.put(id, StringEscapeUtils.unescapeHtml4(StringEscapeUtils.unescapeJava(text)));
+		this.sentences.put(id, StringEscapeUtils.unescapeXml(StringEscapeUtils.unescapeJava(text)));
 	}
 	
 	/**
