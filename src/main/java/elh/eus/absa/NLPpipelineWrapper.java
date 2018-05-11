@@ -512,11 +512,11 @@ public final class NLPpipelineWrapper {
 	public static int tagSentence(String input, String savePathNoExt, String lang, String posModel, String lemmaModel, eus.ixa.ixa.pipe.pos.Annotate postagger) throws IOException, JDOMException
 	{				
 		KAFDocument kafinst = new KAFDocument("","");
-			
+		//System.err.println("NLPpipelineWrapper::tagSentence - begin");
 		//System.err.println(posModel);
 		if (FileUtilsElh.checkFile(savePathNoExt+".kaf"))
 		{
-			//System.err.println("NLPpipelineWrapper::tagSentence : file already there:"+savePathNoExt+".kaf");
+			System.err.println("NLPpipelineWrapper::tagSentence : file already there:"+savePathNoExt+".kaf");
 			return 1;
 		}
 		
@@ -531,6 +531,7 @@ public final class NLPpipelineWrapper {
 		}
 		else
 		{
+			//System.err.println("NLPpipelineWrapper::tagSentence - ixa-pipe");
 			kafinst = ixaPipesTokPos(input, lang, posModel, postagger);
 			kafinst.save(savePathNoExt+".kaf");										
 		}
