@@ -524,8 +524,8 @@ public class Features {
 						KAFDocument naf = KAFDocument.createFromFile(new File(nafPath));
 						// N-gram Feature vector : extracted from sentences
 						int success = extractChrNgramsKAF(minChrNgram, maxChrNgram, naf, true);
-						System.err.println(
-								"Features::createFeatureSet -> character ngram extraction - " + done + "docs processed...");
+						System.err.print(
+								"\rFeatures::createFeatureSet -> character ngram extraction - " + done + "docs processed...");
 						done++;
 					} catch (IOException ioe) {
 						System.err.println("Features::createFeatureSet -> error when reading naf for sentence " + key
