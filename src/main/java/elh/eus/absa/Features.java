@@ -20,7 +20,6 @@ This file is part of EliXa.
 package elh.eus.absa;
 
 import elh.eus.absa.CorpusReader;
-import elh.eus.absa.Lexicon.Polarity;
 import ixa.kaflib.KAFDocument;
 import ixa.kaflib.Term;
 import ixa.kaflib.WF;
@@ -28,11 +27,9 @@ import ixa.kaflib.WF;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -47,9 +44,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.ForkJoinTask;
-import java.util.concurrent.RecursiveTask;
 
 import weka.core.Attribute;
 import weka.core.Instance;
@@ -61,7 +55,6 @@ import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.jdom2.JDOMException;
 
@@ -127,7 +120,7 @@ public class Features {
 	private Pattern ngramPrefix = Pattern.compile("(CHR|WF|LEM|POS)_(.*)$"); 	
 	private Pattern modifierPrefix = Pattern.compile("(SHI|INT|WEA)_(.*)$"); 
 	private Pattern ngPattern = Pattern.compile("^((CHR|WF|LEM|POS)_)?((SHI|INT|WEA)_)*(.*)$");
-	private Pattern punctPattern = Pattern.compile(" (\\p{Punct} )$");
+	private Pattern punctPattern = Pattern.compile(" (\\p{Punct} )");
 	//pattern to match eustagger executable
 	private Pattern eustagger = Pattern.compile("(eustagger|euslem|ixa-pipe-pos-eu)",Pattern.CASE_INSENSITIVE);
 
@@ -524,8 +517,11 @@ public class Features {
 						KAFDocument naf = KAFDocument.createFromFile(new File(nafPath));
 						// N-gram Feature vector : extracted from sentences
 						int success = extractChrNgramsKAF(minChrNgram, maxChrNgram, naf, true);
-						System.err.print(
-								"\rFeatures::createFeatureSet -> character ngram extraction - " + done + "docs processed...");
+						if (done % 100 == 0 )
+						{
+							System.err.print(
+									"\rFeatures::createFeatureSet -> character ngram extraction - " + done + "docs processed...");
+						}
 						done++;
 					} catch (IOException ioe) {
 						System.err.println("Features::createFeatureSet -> error when reading naf for sentence " + key
@@ -535,6 +531,8 @@ public class Features {
 					}
 					
 				}
+				System.err.println("Features : createFeatureSet() - number of files for which tagged files"
+						+ " are problematic: "+tagFails+", if > 0 this may result in incorrect training");
 				addNumericFeatureSet("", charNgrams, chrfMinFreq);
 			}
 
@@ -572,6 +570,7 @@ public class Features {
 			{
 				int wfNgramsLength=Integer.valueOf(params.getProperty("wfngrams"));
 				int tagFails=0;
+				int done=0;
 				System.err.println("Features::createFeatureSet -> word from ngram extraction ("+wfNgramsLength+")-grams)...");
 				for (String key : corpSentenceIds)
 				{
@@ -580,12 +579,21 @@ public class Features {
 						KAFDocument naf = KAFDocument.createFromFile(new File(nafPath));
 						// N-gram Feature vector : extracted from sentences
 						int success = extractWfNgramsKAF(wfNgramsLength, naf, true);
+						if (done % 100 == 0 )
+						{
+							System.err.print(
+								"\rFeatures::createFeatureSet -> word form ngram extraction - " + done + "docs processed...");
+						}
+						done++;
 					} catch (IOException ioe){
 						System.err.println("Features::createFeatureSet -> error when reading naf for sentence "+key+" opinions for the sentence will be deleted from training set");
 						corpus.removeSentenceOpinions(key);
 						tagFails++;
 					}																
 				}
+				
+				System.err.println("Features : createFeatureSet() - number of files for which tagged files"
+						+ " are problematic: "+tagFails+", if > 0 this may result in incorrect training");
 				addNumericFeatureSet("", wfNgrams, wfMinFreq);
 			}
 
@@ -625,6 +633,7 @@ public class Features {
 				int lemmaNgramsLength=Integer.valueOf(params.getProperty("lemmaNgrams"));
 				System.err.println("Features::createFeatureSet -> lemma ngram extraction ("+lemmaNgramsLength+"-grams)...");
 				int tagFails = 0;
+				int done=0;
 				for (String key : corpSentenceIds)
 				{
 					String nafPath = nafDir+File.separator+key.replace(':', '_')+".kaf";
@@ -641,6 +650,13 @@ public class Features {
 							naf = KAFDocument.createFromFile(naffile);
 							// N-gram Feature vector : extracted from sentences
 							int success = extractLemmaNgrams(lemmaNgramsLength, naf, discardPos, true);
+							if (done % 100 == 0 )
+							{
+								System.err.print(
+										"\rFeatures::createFeatureSet -> lemma ngram extraction - " + done + "docs processed...");
+							}
+							done++;
+
 						} catch (IOException e) {
 							System.err.println("Features::createFeatureSet -> error when reading naf for sentence "+key+" opinions for the sentence will be deleted from training set");
 							e.printStackTrace();							
@@ -648,7 +664,10 @@ public class Features {
 							tagFails++;
 						}
 					} 
-				} 			
+				} 	
+				System.err.println("Features : createFeatureSet() - number of files for which tagged files"
+						+ " are problematic: "+tagFails+", if > 0 this may result in incorrect training");
+				
 				addNumericFeatureSet("", lemmaNgrams, lemmaMinFreq);					
 			}
 			System.out.println("Features : createFeatureSet() - lemma ngram features -> "+(this.featNum-featPos));
@@ -679,6 +698,7 @@ public class Features {
 			{
 				int posNgramLength= Integer.valueOf(postagParam);
 				int tagFails=0;
+				int done=0;
 				System.err.println("Features::createFeatureSet -> pos ngram extraction ("+posNgramLength+"-grams)...");
 				for (String key : corpSentenceIds)
 				{
@@ -695,13 +715,22 @@ public class Features {
 							KAFDocument naf = KAFDocument.createFromFile(nafFile);
 							// N-gram Feature vector : extracted from sentences
 							int success = extractPosNgrams(Integer.valueOf(postagParam), naf, discardPos, true);
+							if (done % 100 == 0 )
+							{
+								System.err.print(
+										"\rFeatures::createFeatureSet -> pos ngram extraction - " + done + "docs processed...");
+							}
+							done++;
+
 						} catch (IOException ioe){
 							System.err.println("Features::createFeatureSet -> error when reading naf for sentence "+key+" opinions for the sentence will be deleted from training set");
 							corpus.removeSentenceOpinions(key);
 							tagFails++;
 						}
 					}				
-				} 							
+				} 
+				System.err.println("Features : createFeatureSet() - number of files for which tagged files"
+						+ " are problematic: "+tagFails+", if > 0 this may result in incorrect training");
 				addNumericFeatureSet("", POSNgrams, 1);
 			}
 			System.out.println("Features : createFeatureSet() - pos tag features -> "+(this.featNum-featPos));
@@ -900,7 +929,6 @@ public class Features {
 			maxChrNgram = Integer.valueOf(chrNgramsLimits[0]);				
 		}
 		
-		
 		//System.out.println("train examples: "+trainExamplesNum);
 		//Create the Weka object for the training set
         Instances rsltdata = new Instances("train", atts, trainExamplesNum);
@@ -911,13 +939,17 @@ public class Features {
 		System.err.println("Features: loadInstances() - featNum: "+this.featNum+" - trainset attrib num -> "+rsltdata.numAttributes()+" - ");
 		//System.out.println("Features: loadInstances() - featNum: "+this.featNum+" - trainset attrib num -> "+rsltdata.numAttributes()+" - ");
 		
+		// int for debuggin the number in problematic tagged files. If not 0 this means probably
+		// a problem in the corpus or the tagger (e.g., character encodings problems) 
+		int tagFails=0;
+		
 		int instId = 1;
 		// fill the vectors for each training example
 		for (Iterator<Entry<String, Opinion>> it = trainExamples.entrySet().iterator(); it.hasNext();)
 		{									
 			Map.Entry<String, Opinion> op = it.next();
 			String oId = op.getKey();
-			//System.err.println("sentence: "+ corpus.getOpinionSentence(o.getId()));
+			//System.err.println("sentence: "+ corpus.getOpinionSentence(oId));
 			
 			//value vector
 			double[] values = new double[featNum];
@@ -933,9 +965,9 @@ public class Features {
 			double upRatio =0.0;
 			if (params.getProperty("upperCaseRatio", "no").equalsIgnoreCase("yes"))
 			{
-				String upper = opNormalized.replaceAll("[\\p{Ll}]", "");
+				String upper = opNormalized.replaceAll("[\\p{Ll}]", ""); //delete all lower case
 				upRatio = (double)upper.length() / (double)opNormalized.length();
-				values[rsltdata.attribute("upperCaseRation").index()] = upRatio;
+				values[rsltdata.attribute("upperCaseRatio").index()] = upRatio;
 			}
 			
 			//process the current instance with the NLP pipeline in order to get token and lemma|pos features
@@ -945,7 +977,6 @@ public class Features {
 			String nafPath = nafDir+File.separator+nafname+".kaf";			
 			//counter for opinion sentence token number. Used for computing relative values of the features
 			int tokNum=1;
-			int tagFails=0;
 			
 			/* document tagging 
 			 * UPDATE 2017/04/03: tokenizing and pos tagging are unified, postagging is always done. 
@@ -953,8 +984,7 @@ public class Features {
 			 * due to the use of various taggers for basque.  
 			 * 
 			 */
-			if (params.containsKey("lemmaNgrams")) // (lemmaNgrams != null) &&
-													// (!lemmaNgrams.isEmpty()))
+			if (params.containsKey("lemmaNgrams")||params.containsKey("wfngrams")||params.containsKey("chrngrams"))
 			{
 				if (!FileUtilsElh.checkFile(nafPath)) {
 					long success = normalizeAndTag(corpus.getOpinion(oId).getsId(), nafDir);
@@ -968,7 +998,7 @@ public class Features {
 
 				// can not use directly KAFDocument.createFromFile because if
 				// file exist but is empty kaflib end in Exception.
-				File nafFile = new File(nafPath);
+				File nafFile = new File(nafPath);				
 				if (nafFile.length() == 0) {
 					it.remove();
 					System.err.println("tagged file exist but is empty for opinion " + oId
@@ -998,17 +1028,9 @@ public class Features {
 				// opinion sentence ("+oId+") -
 				// "+corpus.getOpinionSentence(oId));
 			}
-
-			LinkedList<String> ngrams = new LinkedList<String>();
-			int ngramDim;
-			try {
-				ngramDim = Integer.valueOf(params.getProperty("wfngrams","0"));			
-			} catch (Exception e){
-				ngramDim = 0;
-			}
 			
+
 			boolean polNgrams=params.getProperty("polNgrams","no").equalsIgnoreCase("yes");
-						
 			
 			List<WF> window = nafinst.getWFs();
 			Integer end = corpus.getOpinion(oId).getTo();
@@ -1045,40 +1067,53 @@ public class Features {
 			
 			List<String> windowWFIds = new ArrayList<String>();
 
-			//character ngram related features		
-			StringBuilder sb = new StringBuilder();
-        	for (WF wf : window)
-        	{
-        		sb.append(wf.getForm()).append(" ");
-        	}
-        	String sentence = punctPattern.matcher(sb).replaceAll("$1");
-        	// the following code is to threat correctly uft-16 two byte chars
-        	int len = sentence.codePointCount(0, sentence.length()); 
-            int position = 0;                  // the current position per code point
-         
-            while (position < len-1) 
-            {
-                
-                if (ngrams.size() >= maxChrNgram)
-        		{
-        			ngrams.removeFirst();
-        		}
-                int beginc = sentence.offsetByCodePoints(0, position);   
-                int endc   = sentence.offsetByCodePoints(0, position + 1);
-                
-                ngrams.add(sentence.substring(beginc, endc));
-
-				// add ngrams to the feature vector
-				checkNgramFeatures(ngrams, values, "chr", 1, false, minChrNgram); //toknum
-				position++;
-            }
-			checkNgramFeatures(ngrams, values, "chr", 1, true,minChrNgram); //toknum
 			
+			LinkedList<String> ngrams = new LinkedList<String>();
+			
+			if (minChrNgram >0 && maxChrNgram>minChrNgram)
+			{
+				//character ngram related features		
+				StringBuilder sb = new StringBuilder();
+				for (WF wf : window)
+				{
+					sb.append(wf.getForm()).append(" ");
+				}
+				String sentence = punctPattern.matcher(sb).replaceAll("$1");
+				//System.err.println("Features::loadInstances - sentences for chr-ngrams - before:"
+				//		+ "\n"+sb.toString()+"\nAFTER:\n"+sentence);
+				// the following code is to threat correctly uft-16 two byte chars
+				int len = sentence.codePointCount(0, sentence.length()); 
+				int position = minChrNgram;                  // the current position per code point
+
+				while (position < len-1) 
+				{
+
+					if (ngrams.size() >= maxChrNgram)
+					{
+						ngrams.removeFirst();
+					}
+					int beginc = sentence.offsetByCodePoints(0, position);   
+					int endc   = sentence.offsetByCodePoints(0, position + 1);
+
+					ngrams.add(sentence.substring(beginc, endc));
+
+					// add ngrams to the feature vector
+					checkNgramFeatures(ngrams, values, "chr", 1, false, minChrNgram); //toknum
+					position++;
+				}
+				checkNgramFeatures(ngrams, values, "chr", 1, true,minChrNgram); //toknum
+			}			
 			// END OF character ngram related features		
 
 			
             // word form ngram related features
-            ngrams = new LinkedList<String>();
+            int ngramDim;
+			try {
+				ngramDim = Integer.valueOf(params.getProperty("wfngrams","0"));			
+			} catch (Exception e){
+				ngramDim = 0;
+			}
+			
 			for (WF wf : window)
 			{	
 				windowWFIds.add(wf.getId());
@@ -1278,8 +1313,8 @@ public class Features {
 			instId++;
 		}
 
-		System.err.println("Features : loadInstances() - training data ready total number of examples -> "+trainExamplesNum+
-				" - "+rsltdata.numInstances());
+		System.err.println("Features : loadInstances() - training data ready total number of examples -> "
+				+trainExamplesNum+" - "+rsltdata.numInstances()+"\n\t empty or incorrectly tagged opinions: "+tagFails);
 		
 		if (save)
 		{
@@ -2821,7 +2856,7 @@ public class Features {
 		else
 		{
 			// add ngrams to the feature list
-			for (int i=minSize-1;i<ngrams.size();i++)
+			for (int i=minSize;i<ngrams.size();i++)
 			{
 				String ng = featureFromArray(ngrams.subList(0, i+1), prefix);
 				// add occurrence to feature vector (the functions checks if the given ngram feature exists). 
@@ -3081,14 +3116,14 @@ public class Features {
 		//System.err.println("Features::normalizeAndTag -> "+sId+" document tagging start "+currentSent);		
 		long startTime = System.currentTimeMillis();
 		
-		if ((params.containsKey("wfngrams") || params.containsKey("lemmaNgrams")) &&
+		if ((params.containsKey("wfngrams") || params.containsKey("lemmaNgrams")|| params.containsKey("chrngrams")) &&
 				(! params.getProperty("normalization", "none").equalsIgnoreCase("noEmot")))
 		{
 			currentSent = normalize(currentSent, params.getProperty("normalization", "none"));
 		}
 		long endTime = System.currentTimeMillis();
 		
-		System.err.println("Features::normalizeAndTag -> "+sId+" document normalized ( "+(double)(endTime-startTime)/1000+" seconds)");		
+		System.err.print("Features::normalizeAndTag -> "+sId+" document normalized ( "+(double)(endTime-startTime)/1000+" seconds)");		
 		
 		String nafPath = nafDir+File.separator+sId.replace(':', '_');	
 

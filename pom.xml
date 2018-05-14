@@ -4,7 +4,7 @@
 	<groupId>elh.eus</groupId>
 	<artifactId>elixa</artifactId>
 	<packaging>jar</packaging>
-	<version>0.9.2</version>
+	<version>0.9.3</version>
 	<name>elixa</name>
 	<description>elixa, aspect-based sentiment analysis solution. Developed by ELhuyar Foundation (elhuyar.eus) and IXA NLP Group of the University of the Basque Country (ixa.si.ehu.es).</description>
 	<developers>
