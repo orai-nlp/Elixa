@@ -365,13 +365,23 @@ public class WekaWrapper {
         String strSummary = eval.toSummaryString();
         System.out.println(strSummary);
           
-        // Print per class results
-        String resPerClass = eval.toClassDetailsString();
-        System.out.println(resPerClass);
+        try {
+        	// Print per class results
+        	String resPerClass = eval.toClassDetailsString();
+        	System.out.println(resPerClass);
+        }catch (Exception e){
+        	System.out.println("Error when printing per class results.");
+        	e.printStackTrace();
+        }
         
-        // Get the confusion matrix
-        String cMatrix = eval.toMatrixString();
-        System.out.println(cMatrix);	
+        try {
+        	// Get the confusion matrix
+        	String cMatrix = eval.toMatrixString();
+        	System.out.println(cMatrix);	
+        }catch(Exception e){
+        	System.out.println("Error when printing confusion matrix.");
+        	e.printStackTrace();
+        }
         
         System.out.println();
 	}	

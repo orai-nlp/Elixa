@@ -449,7 +449,7 @@ public class Features {
     		{									
     			Map.Entry<String, String> sntnc = it.next();
     			String sId = sntnc.getKey();
-    			System.err.print("\r normalize and tagging "+sId);
+    			//System.err.print("\r normalize and tagging "+sId);
         		long success = normalizeAndTag(sId,nafDir);
         		if (success == 0)
         		{
@@ -943,6 +943,8 @@ public class Features {
 		// a problem in the corpus or the tagger (e.g., character encodings problems) 
 		int tagFails=0;
 		
+		boolean upperCaseRatio= params.getProperty("upperCaseRatio", "no").equalsIgnoreCase("yes");
+		System.err.println("upper case ratio boolean is "+upperCaseRatio);
 		int instId = 1;
 		// fill the vectors for each training example
 		for (Iterator<Entry<String, Opinion>> it = trainExamples.entrySet().iterator(); it.hasNext();)
@@ -963,12 +965,14 @@ public class Features {
 			
 			// compute uppercase ratio before normalization (if needed)		
 			double upRatio =0.0;
-			if (params.getProperty("upperCaseRatio", "no").equalsIgnoreCase("yes"))
+			if (upperCaseRatio)
 			{
 				String upper = opNormalized.replaceAll("[\\p{Ll}]", ""); //delete all lower case
 				upRatio = (double)upper.length() / (double)opNormalized.length();
 				values[rsltdata.attribute("upperCaseRatio").index()] = upRatio;
+				System.err.println("upper case ratio for "+oId+" = "+upRatio);
 			}
+			
 			
 			//process the current instance with the NLP pipeline in order to get token and lemma|pos features
 			KAFDocument nafinst = new KAFDocument("","");
@@ -984,7 +988,11 @@ public class Features {
 			 * due to the use of various taggers for basque.  
 			 * 
 			 */
-			if (params.containsKey("lemmaNgrams")||params.containsKey("wfngrams")||params.containsKey("chrngrams"))
+			if (params.containsKey("lemmaNgrams")
+					||params.containsKey("wfngrams")
+					||params.containsKey("chrngrams")
+					||!params.getProperty("pos","0").equalsIgnoreCase("0")
+					||!params.getProperty("posFilter","none").equalsIgnoreCase("none"))
 			{
 				if (!FileUtilsElh.checkFile(nafPath)) {
 					long success = normalizeAndTag(corpus.getOpinion(oId).getsId(), nafDir);
@@ -2078,14 +2086,12 @@ public class Features {
                 
                 ngrams.add(sentence.substring(begin, end));
                 
-        		// add ngrams to the feature list
-        		int i=minN;
-        		while (i<ngrams.size())
+        		// add ngrams to the feature list        		
+        		for (int i=minN-1; i<ngrams.size();i++)
         		{
         			String ng = featureFromArray(ngrams.subList(0, i+1), "chr");
         			addNgram ("chr", ng);
         			//System.err.println("extractChrNgramsKAF:: added ngram: "+ng);
-        			i++;
         		}
         		pos++;
         	}
@@ -2306,7 +2312,7 @@ public class Features {
 	 *  Help function to add one ngram and its frequence (current+1) to the corresponding structure depending 
 	 *  on the ngram type.
 	 * 
-	 * @param type (wf|lemma|pos)
+	 * @param type (chr|wf|lemma|pos)
 	 * @param ngram
 	 */
 	private void addNgram (String type, String ngram)
@@ -2798,6 +2804,7 @@ public class Features {
 	{
 		if (attIndexes.containsKey(att))
 		{
+			//System.err.print("Features::addNumericToFeatureVector - "+att);
 			int current_ind = attIndexes.get(att);
 			//if the current word form is in the ngram list activate the feature in the vector 
 			fVector[current_ind]=fVector[current_ind]+(1/(double)sentTokNum);
@@ -2837,7 +2844,7 @@ public class Features {
 	 */
 	private void checkNgramFeatures (LinkedList<String> ngrams, double[] fVector, String prefix, int tokens, boolean empty, int minSize)
 	{
-		//System.err.println("features::checkNgramFeatures ->"+Arrays.asList(ngrams).toString());
+		System.err.println("features::checkNgramFeatures ->"+Arrays.asList(ngrams).toString());
 		
 		// if empty is active means that we are checking the end of the sentence and 
 		// the ngram list must be emptied 
@@ -2856,7 +2863,7 @@ public class Features {
 		else
 		{
 			// add ngrams to the feature list
-			for (int i=minSize;i<ngrams.size();i++)
+			for (int i=minSize-1;i<ngrams.size();i++)
 			{
 				String ng = featureFromArray(ngrams.subList(0, i+1), prefix);
 				// add occurrence to feature vector (the functions checks if the given ngram feature exists). 
@@ -3113,6 +3120,15 @@ public class Features {
 			return 0;
 		}
 		
+		//
+		String nafPath = nafDir+File.separator+sId.replace(':', '_');	
+		if (FileUtilsElh.checkFile(nafPath+".kaf"))
+		{
+			System.err.println("NLPpipelineWrapper::NormalizeAndTag : tagged file exists:"+nafPath+".kaf");
+			return 1;
+		}
+		
+		
 		//System.err.println("Features::normalizeAndTag -> "+sId+" document tagging start "+currentSent);		
 		long startTime = System.currentTimeMillis();
 		
@@ -3125,8 +3141,6 @@ public class Features {
 		
 		System.err.print("Features::normalizeAndTag -> "+sId+" document normalized ( "+(double)(endTime-startTime)/1000+" seconds)");		
 		
-		String nafPath = nafDir+File.separator+sId.replace(':', '_');	
-
 		try {
 			int success = NLPpipelineWrapper.tagSentence(currentSent, nafPath, corpus.getLang(),  params.getProperty("pos-model", "default"), params.getProperty("lemma-model", "default"), postagger);
 			//System.err.println("Features::normalizeAndTag -> "+sId+" document tagging done "+success);		
