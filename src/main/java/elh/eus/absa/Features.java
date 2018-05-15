@@ -83,13 +83,16 @@ public class Features {
 
 	//structure to store word form ngram attributes
 	private HashMap<String, Integer> charNgrams = new HashMap<String,Integer>(); 
-
+	
 	//structure to store word form ngram attributes
 	private HashMap<String, Integer> wfNgrams = new HashMap<String,Integer>(); 
-
+	
 	//structure to store lemma ngram attributes
 	private HashMap<String, Integer> lemmaNgrams = new HashMap<String,Integer>(); 
-
+	
+	//structures to compute tf and idf values. Same structures are used for word forms and lemmas.
+	private TfIdf tfIdfStats = new TfIdf();	
+	
 	//structure to store POS ngram attributes
 	private HashMap<String, Integer> POSNgrams = new HashMap<String,Integer>(); 
 	
@@ -165,7 +168,9 @@ public class Features {
 		}
 
 		String posModel=params.getProperty("pos-model","default");
-		if (params.containsKey("lemmaNgrams") || !params.getProperty("pos","0").equalsIgnoreCase("0"))
+		if (params.containsKey("lemmaNgrams") || !params.getProperty("pos","0").equalsIgnoreCase("0") 
+				|| !params.getProperty("wfngrams", "0").equalsIgnoreCase("0")
+				|| !params.getProperty("chrngrams", "0").equalsIgnoreCase("0"))
     	{
     		if (!eustagger.matcher(posModel).find())
     		{
@@ -417,7 +422,9 @@ public class Features {
 		//word form and lemma ngram minimum frequencies.
 		int chrfMinFreq=1;
 		int wfMinFreq=1;
+		float wfTfidfThreshold=0;
 		int lemmaMinFreq=1;
+		float lemmaTfidfThreshold=0;
 		
 		// in case pos tags are used and we want to filter lemmas according to their pos 
 		List<String> discardPos = new ArrayList<String>();
@@ -502,7 +509,7 @@ public class Features {
 			else if (corpus.getFormat().startsWith("tab") && !corpus.getFormat().equalsIgnoreCase("tabNotagged")) {
 				// N-gram Feature vector : extracted from sentences
 				int success = extractCharNgramsTAB(minChrNgram,maxChrNgram, true);
-				addNumericFeatureSet("", charNgrams, chrfMinFreq);
+				addNumericFeatureSet("", charNgrams, chrfMinFreq,0);
 			}
 			// Otherwise use previously tagged files with ixa-pipes
 			else {
@@ -533,7 +540,7 @@ public class Features {
 				}
 				System.err.println("Features : createFeatureSet() - number of files for which tagged files"
 						+ " are problematic: "+tagFails+", if > 0 this may result in incorrect training");
-				addNumericFeatureSet("", charNgrams, chrfMinFreq);
+				addNumericFeatureSet("", charNgrams, chrfMinFreq,0);
 			}
 
 			System.err.println("Features : createFeatureSet() - character ngram features -> " + (this.featNum - featPos));
@@ -551,6 +558,15 @@ public class Features {
 				System.err.println("Features::createFeatureSet() - provided word form minimum frequency "
 						+ "is not an integer. Default value 1 will be used");
 			}				
+			// tf idf threshold for word form ngrams
+			try {
+				wfTfidfThreshold = Float.parseFloat(params.getProperty("wfTfidfThreshold", "0"));
+			}
+			catch (NumberFormatException nfe){
+				System.err.println("Features::createFeatureSet() - provided word form minimum frequency "
+						+ "is not an integer. Default value 1 will be used");
+			}
+			
 			
 			File test = new File(params.getProperty("wfngrams"));
 			// If the word form ngram list is stored in a file.
@@ -563,7 +579,7 @@ public class Features {
 			{
 				// N-gram Feature vector : extracted from sentences
 				int success = extractNgramsTAB(Integer.valueOf(params.getProperty("wfngrams")), "wf", discardPos, true);
-				addNumericFeatureSet("", wfNgrams, wfMinFreq);
+				addNumericFeatureSet("", wfNgrams, wfMinFreq,wfTfidfThreshold);
 			}
 			// Otherwise  use previously tagged files with ixa-pipes 
 			else
@@ -594,13 +610,15 @@ public class Features {
 				
 				System.err.println("Features : createFeatureSet() - number of files for which tagged files"
 						+ " are problematic: "+tagFails+", if > 0 this may result in incorrect training");
-				addNumericFeatureSet("", wfNgrams, wfMinFreq);
+				addNumericFeatureSet("", wfNgrams, wfMinFreq,wfTfidfThreshold);
 			}
 
 			System.err.println("Features : createFeatureSet() - word form ngram features -> "+(this.featNum-featPos));
 			System.out.println("Features : createFeatureSet() - word form ngram features -> "+(this.featNum-featPos));
 		}
 		
+		// tf-idf matrices are reinitialized, in case they are needed for lemmas.
+		tfIdfStats = new TfIdf();
 		// lemma ngram features
 		if (params.containsKey("lemmaNgrams"))
 		{	
@@ -612,7 +630,15 @@ public class Features {
 				System.err.println("Features::createFeatureSet() - provided lemma minimum frequency "
 						+ "is not an integer. Default value 1 will be used");
 			}				
-			
+			// tf idf threshold for lemma ngrams
+			try {
+				lemmaTfidfThreshold = Float.parseFloat(params.getProperty("lemmaTfidfThreshold", "0"));
+			}
+			catch (NumberFormatException nfe){
+				System.err.println("Features::createFeatureSet() - provided lemma tf-idf threshold "
+						+ "is not a float. Default value 0 will be used");
+			}
+
 			featPos = this.featNum;
 			File test = new File(params.getProperty("lemmaNgrams"));
 			// If N-grams are stored in a file
@@ -625,7 +651,7 @@ public class Features {
 			{
 				// N-gram Feature vector : extracted from sentences
 				int success = extractNgramsTAB(Integer.valueOf(params.getProperty("lemmaNgrams")), "lemma", discardPos, true);
-				addNumericFeatureSet("", lemmaNgrams, lemmaMinFreq);
+				addNumericFeatureSet("", lemmaNgrams, lemmaMinFreq,lemmaTfidfThreshold);
 			}
 			// Otherwise  use previously tagged files with ixa-pipes 
 			else
@@ -668,7 +694,7 @@ public class Features {
 				System.err.println("Features : createFeatureSet() - number of files for which tagged files"
 						+ " are problematic: "+tagFails+", if > 0 this may result in incorrect training");
 				
-				addNumericFeatureSet("", lemmaNgrams, lemmaMinFreq);					
+				addNumericFeatureSet("", lemmaNgrams, lemmaMinFreq, lemmaTfidfThreshold);					
 			}
 			System.out.println("Features : createFeatureSet() - lemma ngram features -> "+(this.featNum-featPos));
 			System.err.println("Features : createFeatureSet() - lemma ngram features -> "+(this.featNum-featPos));
@@ -691,7 +717,7 @@ public class Features {
 			{
 				// N-gram Feature vector : extracted from sentences
 				int success = extractNgramsTAB(Integer.valueOf(postagParam), "pos", discardPos, true);
-				addNumericFeatureSet("", POSNgrams, 1);
+				addNumericFeatureSet("", POSNgrams, 1,0);
 			}
 			// Otherwise  use previously tagged files with ixa-pipes 
 			else
@@ -731,7 +757,7 @@ public class Features {
 				} 
 				System.err.println("Features : createFeatureSet() - number of files for which tagged files"
 						+ " are problematic: "+tagFails+", if > 0 this may result in incorrect training");
-				addNumericFeatureSet("", POSNgrams, 1);
+				addNumericFeatureSet("", POSNgrams, 1,0);
 			}
 			System.out.println("Features : createFeatureSet() - pos tag features -> "+(this.featNum-featPos));
 			System.err.println("Features : createFeatureSet() - pos tag features -> "+(this.featNum-featPos));
@@ -944,7 +970,7 @@ public class Features {
 		int tagFails=0;
 		
 		boolean upperCaseRatio= params.getProperty("upperCaseRatio", "no").equalsIgnoreCase("yes");
-		System.err.println("upper case ratio boolean is "+upperCaseRatio);
+		
 		int instId = 1;
 		// fill the vectors for each training example
 		for (Iterator<Entry<String, Opinion>> it = trainExamples.entrySet().iterator(); it.hasNext();)
@@ -970,7 +996,7 @@ public class Features {
 				String upper = opNormalized.replaceAll("[\\p{Ll}]", ""); //delete all lower case
 				upRatio = (double)upper.length() / (double)opNormalized.length();
 				values[rsltdata.attribute("upperCaseRatio").index()] = upRatio;
-				System.err.println("upper case ratio for "+oId+" = "+upRatio);
+				//System.err.println("upper case ratio for "+oId+" = "+upRatio);
 			}
 			
 			
@@ -1301,7 +1327,7 @@ public class Features {
 			{
 				// add class value as a double (Weka stores all values as doubles )
 				String pol = normalizePolarity(trainExamples.get(oId).getPolarity());
-				//System.err.println("Features::loadInstances - pol "+pol+" for oid "+oId+" - text:"+corpus.getOpinionSentence(oId));
+				System.err.println("Features::loadInstances - pol "+pol+" for oid "+oId+" - text:"+corpus.getOpinionSentence(oId));
 				if (pol != null && !pol.isEmpty())
 				{
 					//System.err.println("polarity: _"+pol+"_");
@@ -1452,8 +1478,7 @@ public class Features {
 					InputStream reader = new FileInputStream(new File(nafPath));
 					taggedFile = IOUtils.toString(reader);
 					reader.close();
-				} catch (IOException | JDOMException fe) {
-					// TODO Auto-generated catch block
+				} catch (IOException | JDOMException fe) {					
 					fe.printStackTrace();
 				}
 
@@ -2127,8 +2152,11 @@ public class Features {
 
         
         for (List<WF> sent : kafDoc.getSentences()) 
-        { 
+        {
+        	
         	LinkedList<String> ngrams = new LinkedList<String>();
+        	HashMap<String,Boolean> dfProcessed = new HashMap<String,Boolean>();
+        	
         	for (WF wf : sent)
         	{
         		if (ngrams.size() >= length)
@@ -2143,6 +2171,12 @@ public class Features {
         		{
         			String ng = featureFromArray(ngrams.subList(0, i+1), "wf");
         			addNgram ("wf", ng);  
+        			if (!dfProcessed.containsKey(ng))
+        			{
+        				tfIdfStats.updateDf(ng);
+        				dfProcessed.put(ng, true);
+        			}
+        			
         			if (mod>1)
         			{
         				String not_ng = ngramPrefix.matcher(ng).replaceAll("$1_SHI_$2");
@@ -2159,6 +2193,11 @@ public class Features {
         	{
         		String ng = featureFromArray(ngrams, "wf");
         		addNgram ("wf", ng);  
+        		if (!dfProcessed.containsKey(ng))
+    			{
+        			tfIdfStats.updateDf(ng);
+    				dfProcessed.put(ng, true);
+    			}
         		if (mod>1)
     			{
     				String not_ng = ngramPrefix.matcher(ng).replaceAll("$1_SHI_$2");
@@ -2199,6 +2238,8 @@ public class Features {
         for (int s=0; s<sentNum;s++) 
         { 
         	LinkedList<String> ngrams = new LinkedList<String>();
+        	HashMap<String,Boolean> dfProcessed = new HashMap<String,Boolean>();
+
         	for (Term term : kafDoc.getTermsBySent(s))
         	{
         		if (ngrams.size() >= length)
@@ -2225,6 +2266,11 @@ public class Features {
         		{        			
         			String ng = featureFromArray(ngrams.subList(0, i+1), "lemma");
         			addNgram ("lemma", ng);  
+        			if (!dfProcessed.containsKey(ng))
+        			{
+        				tfIdfStats.updateDf(ng);
+        				dfProcessed.put(ng, true);
+        			}
         			if (mod>1)
         			{
         				String not_ng = ngramPrefix.matcher(ng).replaceAll("$1_SHI_$2");
@@ -2241,6 +2287,11 @@ public class Features {
         	{
         		String ng = featureFromArray(ngrams, "lemma");
         		addNgram ("lemma", ng);
+        		if (!dfProcessed.containsKey(ng))
+    			{
+        			tfIdfStats.updateDf(ng);
+    				dfProcessed.put(ng, true);
+    			}
         		if (mod>1)
     			{
     				String not_ng = ngramPrefix.matcher(ng).replaceAll("$1_SHI_$2");
@@ -2758,13 +2809,17 @@ public class Features {
 	 * @param feat
 	 * @param String prefix : prefix appended to each of the values to build the feature name 
 	 * 							e.g. "attId_"+13 = "attId_13"  
+	 * 
+	 * TODO: for the moment, although tf-idf threshold is given, only min_df is used.
 	 */
-	private void addNumericFeatureSet(String prefix, HashMap<String,Integer> featSet, int threshold) {
+	private void addNumericFeatureSet(String prefix, HashMap<String,Integer> featSet, int minTf,float tfidfThreshold) {
 		
-		System.err.println("Features::addNumericFeatureSet - threshold: "+threshold);
+		System.err.println("Features::addNumericFeatureSet - threshold: "+minTf);
 		for (String s : featSet.keySet())
 		{
-			if (featSet.get(s) >= threshold)
+			float sdf = tfIdfStats.getDf(s);
+			float stfidf = 1*sdf; 
+			if ((featSet.get(s) >= minTf) && (stfidf >= tfidfThreshold))
 			{
 				String attName  = prefix+s;			
 				this.atts.add(new Attribute(attName, this.featNum));
@@ -2844,7 +2899,7 @@ public class Features {
 	 */
 	private void checkNgramFeatures (LinkedList<String> ngrams, double[] fVector, String prefix, int tokens, boolean empty, int minSize)
 	{
-		System.err.println("features::checkNgramFeatures ->"+Arrays.asList(ngrams).toString());
+		//System.err.println("features::checkNgramFeatures ->"+Arrays.asList(ngrams).toString());
 		
 		// if empty is active means that we are checking the end of the sentence and 
 		// the ngram list must be emptied 
@@ -3062,31 +3117,31 @@ public class Features {
 		//URL normalization
 		if (normOpt.equalsIgnoreCase("all"))
 		{
-			return MicrotxtNormalizer.normalizeSentence(input, true, true, true);
+			return MicrotxtNormalizer.normalizeSentence(input, true, true, true, true, true);
 		}	
 		else if (normOpt.equalsIgnoreCase("noHashtag")) 
 		{
-			return MicrotxtNormalizer.normalizeSentence(input, true, true, false);
+			return MicrotxtNormalizer.normalizeSentence(input, true, true, false, true, true);
 		}
 		else if (normOpt.equalsIgnoreCase("noHashEmo")) 
 		{
-			return MicrotxtNormalizer.normalizeSentence(input, true, true, false);
+			return MicrotxtNormalizer.normalizeSentence(input, true, true, false, false, true);
 		}
 		else if (normOpt.equalsIgnoreCase("noEmot")) 
 		{
-			return MicrotxtNormalizer.normalizeSentence(input, true, true, true);
+			return MicrotxtNormalizer.normalizeSentence(input, true, true, true, false, true);
 		}	
 		else if (normOpt.equalsIgnoreCase("url")) 
 		{
-			return MicrotxtNormalizer.normalizeSentence(input, true, false, false);
+			return MicrotxtNormalizer.normalizeSentence(input, true, false, false, false, false);
 		}		
 		else if (normOpt.equalsIgnoreCase("minimum")) 
 		{
-			return MicrotxtNormalizer.normalizeSentence(input, false, false, true);
+			return MicrotxtNormalizer.normalizeSentence(input, false, false, true, false, false);
 		}		
 		else if (normOpt.equalsIgnoreCase("old")) 
 		{
-			return MicrotxtNormalizer.normalizeSentence(input, true, false, true);
+			return MicrotxtNormalizer.normalizeSentence(input, true, false, true, false, false);
 		}
 		else {
 			return input;
@@ -3151,8 +3206,11 @@ public class Features {
 		} catch (IOException ioe){
 			System.err.println("Features::normalizeAndTag -> Error when writing a tagged sentence");
 			ioe.printStackTrace();
+		} catch (Exception e){
+			System.err.println("Features::normalizeAndTag -> Error when tagging sentence, unknown reason");
+			e.printStackTrace();
 		}
 		return 0; //failure
-	}
+	}	
 	
 }

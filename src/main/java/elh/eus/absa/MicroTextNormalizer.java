@@ -199,21 +199,25 @@ public class MicroTextNormalizer {
 	 * @param hashtag
 	 * @return
 	 */
-	public String normalizeSentence (String input, boolean url, boolean user, boolean hashtag)
+	public String normalizeSentence (String input, boolean url, boolean user, boolean hashtag, boolean emot, boolean nonStandard)
 	{
 		//System.out.println("MicroTextNormalization::normalizeSentence - input: "+input);
 		String out = "";
 		//separate words attached to hashtags and usernames (e.g., hello#world -> hello #world)
 		//String in = input.replaceAll("([^\\s])([@#][\\p{L}\\p{M}\\p{Nd}])", "$1 $2");
 		String in = attachedWords.matcher(input).replaceAll("$1 $2");
-		if (! getEmodict().isEmpty())
+		if (emot && !getEmodict().isEmpty())
 		{
 			in = emoticonMapping(in);
 		}
 		
 		for (String s: in.split("\\s+"))
 		{
-			String token = correctNonStandardWord(s);
+			String token = s;
+			if (nonStandard)
+			{
+				token = correctNonStandardWord(s);
+			}
 			
 			if (url)
 			{

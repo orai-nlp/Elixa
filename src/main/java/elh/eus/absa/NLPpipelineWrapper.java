@@ -229,7 +229,7 @@ public final class NLPpipelineWrapper {
 	 * @throws IOException
 	 * @throws JDOMException
 	 */
-	public static KAFDocument ixaPipesPos(KAFDocument tokenizedKaf, String posModelPath, eus.ixa.ixa.pipe.pos.Annotate postagger) throws IOException, JDOMException
+	public static KAFDocument ixaPipesPos(KAFDocument tokenizedKaf, String posModelPath, eus.ixa.ixa.pipe.pos.Annotate postagger) throws IOException, JDOMException, NullPointerException
 	{
 		
 		KAFDocument.LinguisticProcessor posLp = tokenizedKaf.addLinguisticProcessor(
