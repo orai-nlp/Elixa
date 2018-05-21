@@ -77,9 +77,9 @@ public class WekaWrapper {
 	 * @param id : whether the first attribute represents the instance id and should be filtered out for classifying
 	 * @throws Exception
 	 */
-	public WekaWrapper (Instances traindata, boolean id, String classifier) throws Exception
+	public WekaWrapper (Instances traindata, boolean id, String classifier,String cparam) throws Exception
 	{
-		this(traindata, null, id, classifier);
+		this(traindata, null, id, classifier, cparam);
 	}
 	
 	/**
@@ -88,18 +88,31 @@ public class WekaWrapper {
 	 * @param id : whether the first attribute represents de instance id and should be filtered out for classifying
 	 * @throws Exception
 	 */
-	public WekaWrapper (Instances traindata, Instances testdata, boolean id,String classifier) throws Exception{
+	public WekaWrapper (Instances traindata, Instances testdata, boolean id,String classifier, String cparam) throws Exception{
 		WekaPackageManager.loadPackages( false, true, false );
 		Classifier svm;
+		
 		// classifier
 		switch (classifier) {
 		case "libsvm":
+			System.out.println("WekaWrapper::WekaWrapper - Setting up libsvm classifier");
+			System.out.println("\t c parameter: "+cparam+"\n");
 			weka.classifiers.functions.LibSVM libsvm =  new weka.classifiers.functions.LibSVM(); 
-			libsvm.setOptions(weka.core.Utils.splitOptions("-S 0 -K 0 -D 3 -G 0.0 -R 0.0 -N 0.5 -M 40.0 -C 1.0 -E 0.001 -P 0.1"));
+			libsvm.setOptions(weka.core.Utils.splitOptions("-S 0 -K 0 -D 3 -G 0.0 -R 0.0 -N 0.5 -M 40.0 -C "+cparam+" -E 0.001 -P 0.1"));			
 			svm = libsvm;
+			break;
+		case "linearsvm":
+			System.out.println("WekaWrapper::WekaWrapper - Setting up linear svm (liblinear) classifier\n");
+			System.out.println("\t c parameter: "+cparam+"\n");
+			weka.classifiers.functions.LibLINEAR linearsvm =  new weka.classifiers.functions.LibLINEAR(); 
+			linearsvm.setOptions(weka.core.Utils.splitOptions("-S 1 -C "+cparam+" -E 0.001 -B 1.0 -L 0.1 -l 1000"));
+			svm = linearsvm;
+			break;
 		default:  //weka smo algorithm. default "smo"
+			System.out.println("WekaWrapper::WekaWrapper - Setting up smo svm classifier\n");
+			System.out.println("\t c parameter: "+cparam+"\n");
 			weka.classifiers.functions.SMO smo = new weka.classifiers.functions.SMO();
-			smo.setOptions(weka.core.Utils.splitOptions("-C 1.0 -L 0.0010 -P 1.0E-12 -N 0 -V -1 -W 1 "
+			smo.setOptions(weka.core.Utils.splitOptions("-C "+cparam+" -L 0.0010 -P 1.0E-12 -N 0 -V -1 -W 1 "
 				+ "-K \"weka.classifiers.functions.supportVector.PolyKernel -C 250007 -E 1.0\""));
 			svm = smo;
 			break;

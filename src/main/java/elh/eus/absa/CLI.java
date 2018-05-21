@@ -429,6 +429,8 @@ public class CLI {
 		String lang = parsedArguments.getString("language");
 		String classes = parsedArguments.getString("classnum");
 		String classifier = parsedArguments.getString("classifier");
+		String cparam = parsedArguments.getString("cparam");
+
 		int foldNum = Integer.parseInt(parsedArguments.getString("foldNum"));
 		//boolean printPreds = parsedArguments.getBoolean("printPreds");
 		
@@ -459,7 +461,7 @@ public class CLI {
 		WekaWrapper classify;
 		try {			
 			String modelPath = params.getProperty("fVectorDir");
-			classify = new WekaWrapper(traindata, true,classifier);
+			classify = new WekaWrapper(traindata, true,classifier,cparam);
 			classify.saveModel(modelPath+File.separator+"elixa-atp_"+lang+".model");			
 			switch (validation)
 			{
@@ -485,9 +487,13 @@ public class CLI {
 		.help("Load the training parameters file\n");		
 		trainATPParser.addArgument("-cl","--classifier")
 		.required(false)
-		.choices("smo", "libsvm")
+		.choices("smo", "libsvm","linearsvm")
 		.setDefault("smo")
 		.help("Choose svm classifier. It defaults to weka smo implementation.\n");
+		trainATPParser.addArgument("-cp","--cparameter")
+		.required(false)		
+		.setDefault("1")
+		.help("Choose svm classifier parameter c. It defaults to 1.\n");
 		trainATPParser.addArgument("-cvf", "--foldNum")
 		.required(false)
 		.setDefault(10)
@@ -684,7 +690,7 @@ public class CLI {
 		.help("Load the training parameters file\n");
 		evalATPParser.addArgument("-cl","--classifier")
 		.required(false)
-		.choices("smo", "libsvm")
+		.choices("smo", "libsvm","linearsvm")
 		.setDefault("smo")
 		.help("Choose svm classifier. It defaults to weka smo implementation.\n");
 		evalATPParser.addArgument("-m", "--model")
@@ -949,6 +955,7 @@ public class CLI {
 		int foldNum = Integer.parseInt(parsedArguments.getString("foldNum"));
 		String lang = parsedArguments.getString("language");
 		String classifier = parsedArguments.getString("classifier");
+		String cparam = parsedArguments.getString("cparam");
 		
 		
 		//boolean printPreds = parsedArguments.getBoolean("printPreds");
@@ -973,7 +980,7 @@ public class CLI {
 			Instances traindataEnt = new Instances(traindata);
 			// IMPORTANT: filter indexes are added 1 because weka remove function counts attributes from 1, 
 			traindataEnt.setClassIndex(traindataEnt.attribute("entCat").index());
-			classifyEnts = new WekaWrapper(traindataEnt, true,classifier);
+			classifyEnts = new WekaWrapper(traindataEnt, true,classifier,cparam);
 			String filtRange = String.valueOf(traindata.attribute("attCat").index()+1)+","
 					+ String.valueOf(traindata.attribute("entAttCat").index()+1);			
 			classifyEnts.filterAttribute(filtRange);
@@ -987,7 +994,7 @@ public class CLI {
 			//train second classifier (attributes)
 			Instances traindataAtt = new Instances(traindata);
 			traindataAtt.setClassIndex(traindataAtt.attribute("attCat").index());
-			classifyAtts = new WekaWrapper(traindataAtt, true,classifier);
+			classifyAtts = new WekaWrapper(traindataAtt, true,classifier,cparam);
 			filtRange = String.valueOf(traindataAtt.attribute("entAttCat").index()+1);			
 			classifyAtts.filterAttribute(filtRange);		
 			
@@ -1030,6 +1037,7 @@ public class CLI {
 		//String validation = parsedArguments.getString("validation");
 		String lang = parsedArguments.getString("language");
 		String classifier = parsedArguments.getString("classifier");
+		String cparam = parsedArguments.getString("cparam");
 		//int foldNum = Integer.parseInt(parsedArguments.getString("foldNum"));
 		//boolean printPreds = parsedArguments.getBoolean("printPreds");
 		boolean nullSentenceOpinions = parsedArguments.getBoolean("nullSentences");
@@ -1070,7 +1078,7 @@ public class CLI {
 			entdata.deleteAttributeAt(entdata.attribute("attCat").index());
 			entdata.deleteAttributeAt(entdata.attribute("entAttCat").index());
 			entdata.setClassIndex(entdata.attribute("entCat").index());
-			onevsall = new WekaWrapper(entdata,true,classifier);								
+			onevsall = new WekaWrapper(entdata,true,classifier,cparam);								
 			
 			
 			if (! onlyTest)
@@ -1139,7 +1147,7 @@ public class CLI {
 			}
 			
 			entdata.setClass(entdata.attribute("attCat"));
-			onevsall = new WekaWrapper(entdata, true,classifier);
+			onevsall = new WekaWrapper(entdata, true,classifier,cparam);
 			
 			/**
 			 *  Bigarren sailkatzailea
@@ -1225,6 +1233,7 @@ public class CLI {
 		//String validation = parsedArguments.getString("validation");
 		String lang = parsedArguments.getString("language");
 		String classifier = parsedArguments.getString("classifier");
+		String cparam = parsedArguments.getString("cparam");
 		//int foldNum = Integer.parseInt(parsedArguments.getString("foldNum"));
 		//boolean printPreds = parsedArguments.getBoolean("printPreds");
 		boolean nullSentenceOpinions = parsedArguments.getBoolean("nullSentences");
@@ -1267,7 +1276,7 @@ public class CLI {
 			traindata.deleteAttributeAt(traindata.attribute("attCat").index());
 			traindata.deleteAttributeAt(traindata.attribute("entCat").index());
 			traindata.setClassIndex(traindata.attribute("entAttCat").index());
-			onevsall = new WekaWrapper(traindata,true,classifier);
+			onevsall = new WekaWrapper(traindata,true,classifier,cparam);
 			
 			if (! onlyTest)
 			{
@@ -1333,6 +1342,7 @@ public class CLI {
 		String lang = parsedArguments.getString("language");
 		int foldNum = Integer.parseInt(parsedArguments.getString("foldNum"));
 		String classifier = parsedArguments.getString("classifier");
+		String cparam = parsedArguments.getString("cparam");
 		//boolean printPreds = parsedArguments.getBoolean("printPreds");
 		
 		Properties params = loadParameters(paramFile, lang);
@@ -1348,7 +1358,7 @@ public class CLI {
 		try {
 			//train first classifier (entities)
 			traindata.setClass(traindata.attribute("entCat"));				
-			classify = new WekaWrapper(traindata, true,classifier);
+			classify = new WekaWrapper(traindata, true,classifier,cparam);
 			classify.crossValidate(foldNum);
 			//Classifier entityCl = classify.getMLclass().;
 			
@@ -1432,9 +1442,13 @@ public class CLI {
 		.help("Load the training parameters file\n");
 		trainATCParser.addArgument("-cl","--classifier")
 		.required(false)
-		.choices("smo", "libsvm")
+		.choices("smo", "libsvm","linearsvm")
 		.setDefault("smo")
 		.help("Choose svm classifier. It defaults to weka smo implementation.\n");
+		trainATCParser.addArgument("-cp","--cparam")
+		.required(false)
+		.setDefault("1")
+		.help("Choose svm classifier parameter c. It defaults to 1.\n");
 		trainATCParser.addArgument("-t", "--testset")
 		.required(false)
 		.help("The test or reference corpus.\n");
@@ -1483,7 +1497,7 @@ public class CLI {
 		.help("Load the training parameters file\n");
 		trainATC2Parser.addArgument("-cl","--classifier")
 		.required(false)
-		.choices("smo", "libsvm")
+		.choices("smo", "libsvm","linearsvm")
 		.setDefault("smo")
 		.help("Choose svm classifier. It defaults to weka smo implementation.\n");
 		trainATC2Parser.addArgument("-t", "--testset")

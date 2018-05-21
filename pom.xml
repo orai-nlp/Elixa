@@ -46,6 +46,11 @@
     		<version>1.0.10</version>
 		</dependency>
 		<dependency>
+    		<groupId>nz.ac.waikato.cms.weka</groupId>
+    		<artifactId>LibLINEAR</artifactId>
+    		<version>1.9.7</version>
+		</dependency>
+		<dependency>
 			<groupId>junit</groupId>
 			<artifactId>junit</artifactId>
 			<version>4.12</version>
