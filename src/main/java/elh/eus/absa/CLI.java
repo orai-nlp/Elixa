@@ -429,7 +429,7 @@ public class CLI {
 		String lang = parsedArguments.getString("language");
 		String classes = parsedArguments.getString("classnum");
 		String classifier = parsedArguments.getString("classifier");
-		String cparam = parsedArguments.getString("cparam");
+		String cparam = parsedArguments.getString("cparameter");
 
 		int foldNum = Integer.parseInt(parsedArguments.getString("foldNum"));
 		//boolean printPreds = parsedArguments.getBoolean("printPreds");
@@ -955,7 +955,7 @@ public class CLI {
 		int foldNum = Integer.parseInt(parsedArguments.getString("foldNum"));
 		String lang = parsedArguments.getString("language");
 		String classifier = parsedArguments.getString("classifier");
-		String cparam = parsedArguments.getString("cparam");
+		String cparam = parsedArguments.getString("cparameter");
 		
 		
 		//boolean printPreds = parsedArguments.getBoolean("printPreds");
@@ -1037,7 +1037,7 @@ public class CLI {
 		//String validation = parsedArguments.getString("validation");
 		String lang = parsedArguments.getString("language");
 		String classifier = parsedArguments.getString("classifier");
-		String cparam = parsedArguments.getString("cparam");
+		String cparam = parsedArguments.getString("cparameter");
 		//int foldNum = Integer.parseInt(parsedArguments.getString("foldNum"));
 		//boolean printPreds = parsedArguments.getBoolean("printPreds");
 		boolean nullSentenceOpinions = parsedArguments.getBoolean("nullSentences");
@@ -1233,7 +1233,7 @@ public class CLI {
 		//String validation = parsedArguments.getString("validation");
 		String lang = parsedArguments.getString("language");
 		String classifier = parsedArguments.getString("classifier");
-		String cparam = parsedArguments.getString("cparam");
+		String cparam = parsedArguments.getString("cparameter");
 		//int foldNum = Integer.parseInt(parsedArguments.getString("foldNum"));
 		//boolean printPreds = parsedArguments.getBoolean("printPreds");
 		boolean nullSentenceOpinions = parsedArguments.getBoolean("nullSentences");
@@ -1342,7 +1342,7 @@ public class CLI {
 		String lang = parsedArguments.getString("language");
 		int foldNum = Integer.parseInt(parsedArguments.getString("foldNum"));
 		String classifier = parsedArguments.getString("classifier");
-		String cparam = parsedArguments.getString("cparam");
+		String cparam = parsedArguments.getString("cparameter");
 		//boolean printPreds = parsedArguments.getBoolean("printPreds");
 		
 		Properties params = loadParameters(paramFile, lang);
@@ -1445,7 +1445,7 @@ public class CLI {
 		.choices("smo", "libsvm","linearsvm")
 		.setDefault("smo")
 		.help("Choose svm classifier. It defaults to weka smo implementation.\n");
-		trainATCParser.addArgument("-cp","--cparam")
+		trainATCParser.addArgument("-cp","--cparameter")
 		.required(false)
 		.setDefault("1")
 		.help("Choose svm classifier parameter c. It defaults to 1.\n");
@@ -1500,6 +1500,10 @@ public class CLI {
 		.choices("smo", "libsvm","linearsvm")
 		.setDefault("smo")
 		.help("Choose svm classifier. It defaults to weka smo implementation.\n");
+		trainATC2Parser.addArgument("-cp","--cparameter")
+		.required(false)
+		.setDefault("1")
+		.help("Choose svm classifier parameter c. It defaults to 1.\n");
 		trainATC2Parser.addArgument("-t", "--testset")
 		.required(false)
 		.help("The test or reference corpus.\n");
