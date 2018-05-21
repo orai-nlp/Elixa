@@ -376,7 +376,13 @@ public class CorpusReader {
 	 * @param sentences the sentences to set
 	 */
 	public void addSentence(String id, String text) {
-		this.sentences.put(id, StringEscapeUtils.unescapeXml(StringEscapeUtils.unescapeJava(text)));
+		String unescapedJava = text;
+		try {
+			unescapedJava = StringEscapeUtils.unescapeJava(text);
+		} catch (IllegalArgumentException iae){
+			System.err.println("WARNING: CorpusReader::addSentence - Problem unescaping sentence "+id+".");
+		}
+		this.sentences.put(id, StringEscapeUtils.unescapeXml(unescapedJava));
 	}
 	
 	/**

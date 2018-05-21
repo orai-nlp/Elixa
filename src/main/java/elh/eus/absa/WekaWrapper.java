@@ -35,8 +35,10 @@ import weka.classifiers.Classifier;
 import weka.classifiers.Evaluation;
 import weka.classifiers.meta.FilteredClassifier;
 import weka.core.Attribute;
+import weka.core.Capabilities;
 import weka.core.Instance;
 import weka.core.Instances;
+import weka.core.WekaPackageManager;
 import weka.filters.Filter;
 import weka.filters.supervised.attribute.AddClassification;
 import weka.filters.unsupervised.attribute.Remove;
@@ -75,9 +77,9 @@ public class WekaWrapper {
 	 * @param id : whether the first attribute represents the instance id and should be filtered out for classifying
 	 * @throws Exception
 	 */
-	public WekaWrapper (Instances traindata, boolean id) throws Exception
+	public WekaWrapper (Instances traindata, boolean id, String classifier) throws Exception
 	{
-		this(traindata, null, id);
+		this(traindata, null, id, classifier);
 	}
 	
 	/**
@@ -86,12 +88,23 @@ public class WekaWrapper {
 	 * @param id : whether the first attribute represents de instance id and should be filtered out for classifying
 	 * @throws Exception
 	 */
-	public WekaWrapper (Instances traindata, Instances testdata, boolean id) throws Exception{
-
+	public WekaWrapper (Instances traindata, Instances testdata, boolean id,String classifier) throws Exception{
+		WekaPackageManager.loadPackages( false, true, false );
+		Classifier svm;
 		// classifier
-		weka.classifiers.functions.SMO SVM = new weka.classifiers.functions.SMO();
-		SVM.setOptions(weka.core.Utils.splitOptions("-C 1.0 -L 0.0010 -P 1.0E-12 -N 0 -V -1 -W 1 "
-					+ "-K \"weka.classifiers.functions.supportVector.PolyKernel -C 250007 -E 1.0\""));		
+		switch (classifier) {
+		case "libsvm":
+			weka.classifiers.functions.LibSVM libsvm =  new weka.classifiers.functions.LibSVM(); 
+			libsvm.setOptions(weka.core.Utils.splitOptions("-S 0 -K 0 -D 3 -G 0.0 -R 0.0 -N 0.5 -M 40.0 -C 1.0 -E 0.001 -P 0.1"));
+			svm = libsvm;
+		default:  //weka smo algorithm. default "smo"
+			weka.classifiers.functions.SMO smo = new weka.classifiers.functions.SMO();
+			smo.setOptions(weka.core.Utils.splitOptions("-C 1.0 -L 0.0010 -P 1.0E-12 -N 0 -V -1 -W 1 "
+				+ "-K \"weka.classifiers.functions.supportVector.PolyKernel -C 250007 -E 1.0\""));
+			svm = smo;
+			break;
+		}
+			
 		setTraindata(traindata);	
 		setTestdata(testdata);	
 			
@@ -104,12 +117,12 @@ public class WekaWrapper {
 			// meta-classifier
 			FilteredClassifier fc = new FilteredClassifier();
 			fc.setFilter(rm);
-			fc.setClassifier(SVM);
+			fc.setClassifier(svm);
 			setMLclass(fc);
 		}
 		else
 		{
-			setMLclass(SVM);
+			setMLclass(svm);
 		}
 	}
 

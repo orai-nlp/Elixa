@@ -177,9 +177,7 @@ public class Features {
     			Properties posProp = NLPpipelineWrapper.setPostaggerProperties(posModel, params.getProperty("lemma-model", "default"),
     					corpus.getLang(), "false", "false");					
     			try {
-					System.err.println(posProp.toString()+"\n"+params.getProperty("lemma-model","default")+"\n"+corpus.getLang()+"\n"+posModel);
-
-					postagger = new eus.ixa.ixa.pipe.pos.Annotate(posProp);
+    				postagger = new eus.ixa.ixa.pipe.pos.Annotate(posProp);
 				} catch (IOException e) {						
 					e.printStackTrace();
 					System.err.println("Features::Features() error creating ixa-pipe postagger object, execution aborted.");
@@ -1327,7 +1325,7 @@ public class Features {
 			{
 				// add class value as a double (Weka stores all values as doubles )
 				String pol = normalizePolarity(trainExamples.get(oId).getPolarity());
-				System.err.println("Features::loadInstances - pol "+pol+" for oid "+oId+" - text:"+corpus.getOpinionSentence(oId));
+				//System.err.println("Features::loadInstances - pol "+pol+" for oid "+oId+" - text:"+corpus.getOpinionSentence(oId));
 				if (pol != null && !pol.isEmpty())
 				{
 					//System.err.println("polarity: _"+pol+"_");
@@ -1353,26 +1351,8 @@ public class Features {
 		if (save)
 		{
 			try {	
-				/* The following lines construct the name of the arff file generated*/
-				StringBuilder savePathsb = new StringBuilder();
-				savePathsb.append(params.getProperty("fVectorDir")).append(File.separator).append(corpus.getLang()).append("-features_").append(prefix);
-				savePathsb.append("_w").append(bowWin);
-				savePathsb.append("_chr").append(params.getProperty("chrngrams","0"));
-				savePathsb.append("_wf").append(params.getProperty("wfngrams","0"));
-				savePathsb.append("_l").append(params.getProperty("lemmaNgrams","0"));
-				savePathsb.append("_p").append(params.getProperty("pos","0"));
-				if (params.containsKey("clark")) {
-					savePathsb.append("_cl");
-				}
-				if (params.containsKey("brown")) {
-					savePathsb.append("_br");
-				}
-				if (params.containsKey("word2vec")) {
-					savePathsb.append("_w2v");
-				}
+				String savePath = generateSavePath(prefix, bowWin, upperCaseRatio);
 				
-				String savePath = savePathsb.append(".arff").toString();
-				System.err.println("arff written to: "+savePath);
 				ArffSaver saver = new ArffSaver();
 		
 				saver.setInstances(rsltdata);
@@ -1419,7 +1399,8 @@ public class Features {
 			maxChrNgram = Integer.valueOf(chrNgramsLimits[0]);				
 		}
 		
-		
+		boolean upperCaseRatio= params.getProperty("upperCaseRatio", "no").equalsIgnoreCase("yes");
+
 		//System.out.println("train examples: "+trainExamplesNum);
 		//Create the Weka object for the training set
         Instances rsltdata = new Instances("train", atts, trainExamplesNum);
@@ -1766,25 +1747,7 @@ public class Features {
 		if (save)
 		{
 			try {		
-				/* The following lines construct the name of the arff file generated*/
-				StringBuilder savePathsb = new StringBuilder();
-				savePathsb.append(params.getProperty("fVectorDir")).append(File.separator).append(corpus.getLang()).append("-features_").append(prefix);
-				savePathsb.append("_w").append(bowWin);
-				savePathsb.append("_chr").append(params.getProperty("chrngrams","0"));
-				savePathsb.append("_wf").append(params.getProperty("wfngrams","0"));
-				savePathsb.append("_l").append(params.getProperty("lemmaNgrams","0"));
-				savePathsb.append("_p").append(params.getProperty("pos","0"));
-				if (params.containsKey("clark")) {
-					savePathsb.append("_cl");
-				}
-				if (params.containsKey("brown")) {
-					savePathsb.append("_br");
-				}
-				if (params.containsKey("word2vec")) {
-					savePathsb.append("_w2v");
-				}
-				String savePath = savePathsb.append(".arff").toString();
-				System.err.println("arff written to: "+savePath);
+				String savePath = generateSavePath(prefix, bowWin, upperCaseRatio);
 				ArffSaver saver = new ArffSaver();
 		
 				saver.setInstances(rsltdata);
@@ -3212,5 +3175,69 @@ public class Features {
 		}
 		return 0; //failure
 	}	
+	
+	
+	/**
+	 * 
+	 * Function to name the arff file used by weka.
+	 * 
+	 * @param prefix
+	 * @param bowWin
+	 * @param uppercase
+	 * @return
+	 */
+	private String generateSavePath (String prefix, int bowWin, boolean uppercase ){
+		/* The following lines construct the name of the arff file generated*/
+		StringBuilder savePathsb = new StringBuilder();
+		savePathsb.append(params.getProperty("fVectorDir")).append(File.separator).append(corpus.getLang()).append("-features_").append(prefix);
+		savePathsb.append("_w").append(bowWin);
+		savePathsb.append("_chr").append(params.getProperty("chrngrams","0"));
+		savePathsb.append("-fmin").append(params.getProperty("chrfMinFreq","0"));
+		savePathsb.append("_wf").append(params.getProperty("wfngrams","0"));
+		savePathsb.append("-fmin").append(params.getProperty("wfMinFreq","1"));
+		savePathsb.append("-df").append(params.getProperty("wfTfidfThreshold","1"));
+		savePathsb.append("_l").append(params.getProperty("lemmaNgrams","0"));
+		savePathsb.append("-fmin").append(params.getProperty("lemmaMinFreq","1"));
+		savePathsb.append("-df").append(params.getProperty("lemmaTfidfThreshold","1"));
+		savePathsb.append("_p").append(params.getProperty("pos","0"));
+		
+		if (params.containsKey("posFilter")) {
+			savePathsb.append("-filt").append(params.getProperty("posFilter"));
+		}
+		
+		if (uppercase) {
+			savePathsb.append("_u");
+		}
+		
+		savePathsb.append("_norm-").append(params.getProperty("normalization","none"));
+
+		if (!params.getProperty("polNgrams","no").equalsIgnoreCase("no"));
+		{
+			savePathsb.append("_polNgrams");
+		}
+
+		if (params.containsKey("polarLexiconGeneral")) {
+			savePathsb.append("_polGen");
+		}
+
+		if (params.containsKey("polarLexiconDomain")) {
+			savePathsb.append("_polDom");
+		}
+
+		if (params.containsKey("clark")) {
+			savePathsb.append("_cl");
+		}
+		if (params.containsKey("brown")) {
+			savePathsb.append("_br");
+		}
+		if (params.containsKey("word2vec")) {
+			savePathsb.append("_w2v");
+		}
+
+		System.err.println("arff written to: "+savePathsb);
+		
+		return savePathsb.append(".arff").toString();
+	}
+	
 	
 }
