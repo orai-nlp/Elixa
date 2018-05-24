@@ -119,11 +119,15 @@ public class Features {
 	// feature number
 	private int featNum;
 	
+	// if urls shoul be a feature or not
+	private boolean discardUrls;
+	
 	//Some pattern used during feature extraction
 	private Pattern ngramPrefix = Pattern.compile("(CHR|WF|LEM|POS)_(.*)$"); 	
 	private Pattern modifierPrefix = Pattern.compile("(SHI|INT|WEA)_(.*)$"); 
 	private Pattern ngPattern = Pattern.compile("^((CHR|WF|LEM|POS)_)?((SHI|INT|WEA)_)*(.*)$");
 	private Pattern punctPattern = Pattern.compile(" (\\p{Punct} )");
+	private Pattern alphanumericPattern = Pattern.compile("[^\\p{L}\\d\\s_]");
 	//pattern to match eustagger executable
 	private Pattern eustagger = Pattern.compile("(eustagger|euslem|ixa-pipe-pos-eu)",Pattern.CASE_INSENSITIVE);
 
@@ -185,7 +189,10 @@ public class Features {
 				}
     		}
     	}
-				
+		
+		discardUrls = params.getProperty("discardUrls", "no").equalsIgnoreCase("yes");
+		System.out.println("Features::Features()  -> discard urls: "+discardUrls);
+		
 		// System.err.println("Features: initiate feature extraction from
 		// corpus");
 		createFeatureSet();
@@ -226,6 +233,7 @@ public class Features {
 		}
 		
 		
+		
 		String posModel=params.getProperty("pos-model","default");
 		if (params.containsKey("lemmaNgrams") || !params.getProperty("pos","0").equalsIgnoreCase("0"))
     	{
@@ -245,6 +253,8 @@ public class Features {
     		}
     	}
 		
+		discardUrls = params.getProperty("discardUrls", "no").equalsIgnoreCase("yes");
+		System.out.println("Features::Features()  -> discard urls: "+discardUrls);
 		if (FileUtilsElh.checkFile(modelPath))
 		{
 			createFeatureSetFromModel(modelPath);
@@ -961,7 +971,7 @@ public class Features {
         //traindata.setClassIndex(traindata.numAttributes() - 1);
 		
 		System.err.println("Features: loadInstances() - featNum: "+this.featNum+" - trainset attrib num -> "+rsltdata.numAttributes()+" - ");
-		//System.out.println("Features: loadInstances() - featNum: "+this.featNum+" - trainset attrib num -> "+rsltdata.numAttributes()+" - ");
+		System.out.println("Features: loadInstances() - featNum: "+this.featNum+" - trainset attrib num -> "+rsltdata.numAttributes()+" - ");
 		
 		// int for debuggin the number in problematic tagged files. If not 0 this means probably
 		// a problem in the corpus or the tagger (e.g., character encodings problems) 
@@ -1110,7 +1120,7 @@ public class Features {
 				{
 					sb.append(wf.getForm()).append(" ");
 				}
-				String sentence = punctPattern.matcher(sb).replaceAll("$1");
+				String sentence = sb.toString(); //String sentence = punctPattern.matcher(sb).replaceAll("$1");
 				//System.err.println("Features::loadInstances - sentences for chr-ngrams - before:"
 				//		+ "\n"+sb.toString()+"\nAFTER:\n"+sentence);
 				// the following code is to threat correctly uft-16 two byte chars
@@ -1504,7 +1514,7 @@ public class Features {
         	{
         		sb.append(wf.split("\\s")[0]).append(" ");
         	}
-        	String sentence = punctPattern.matcher(sb).replaceAll("$1");
+        	String sentence = sb.toString(); //String sentence = punctPattern.matcher(sb).replaceAll("$1");
         	// the following code is to threat correctly uft-16 two byte chars
         	int len = sentence.codePointCount(0, sentence.length()); 
             int position = 0;                  // the current position per code point
@@ -1855,7 +1865,7 @@ public class Features {
         	{
         		sb.append(row.split("\t")[0]).append(" ");
         	}
-        	String sentence = punctPattern.matcher(sb).replaceAll("$1");
+        	String sentence = sb.toString(); //String sentence = punctPattern.matcher(sb).replaceAll("$1");
         	// the following code is to threat correctly uft-16 two byte chars
         	int len = sentence.codePointCount(0, sentence.length()); 
             int pos = 0;                  // the current position per code point
@@ -2056,7 +2066,7 @@ public class Features {
         	{
         		sb.append(wf.getForm()).append(" ");
         	}
-        	String sentence = punctPattern.matcher(sb).replaceAll("$1");
+        	String sentence = sb.toString(); //String sentence = punctPattern.matcher(sb).replaceAll("$1");
         	// the following code is to threat correctly uft-16 two byte chars
         	int len = sentence.codePointCount(0, sentence.length()); 
             int pos = minN-1;                  // the current position per code point
@@ -2341,7 +2351,15 @@ public class Features {
 			//System.err.println("Features::addNgram - stopword found! won't be added to the features: "+ngram);
 			return;					
 		}
+		//|| punctPattern.matcher(rawNgramNoMod).matches()
+		//if ((!type.equalsIgnoreCase("pos")) && (StringUtils.isNumeric(rawNgramNoMod))) {
+		//	return;
+		//}
 						
+		if (discardUrls && rawNgramNoMod.equalsIgnoreCase("urlurlurl"))
+		{
+			return;
+		}
 		int freq = 0;        					
 		switch (type)
 		{
@@ -3097,7 +3115,15 @@ public class Features {
 		else if (normOpt.equalsIgnoreCase("url")) 
 		{
 			return MicrotxtNormalizer.normalizeSentence(input, true, false, false, false, false);
-		}		
+		}
+		else if (normOpt.equalsIgnoreCase("urlEmot")) 
+		{
+			return MicrotxtNormalizer.normalizeSentence(input, true, false, false, true, false);
+		}
+		else if (normOpt.equalsIgnoreCase("usrHashUrl")) 
+		{
+			return MicrotxtNormalizer.normalizeSentence(input, true, true, true, false, false);
+		}
 		else if (normOpt.equalsIgnoreCase("minimum")) 
 		{
 			return MicrotxtNormalizer.normalizeSentence(input, false, false, true, false, false);

@@ -225,13 +225,13 @@ public class MicroTextNormalizer {
 			}
 			if (user)
 			{
-				token = normalizeUSR(token,true);
+				token = normalizeUSR(token,false);
 			}
 			if (hashtag)
 			{
 				if (token.startsWith("#"))
 				{
-					token = hashtagNormalization(token,true);					
+					token = hashtagNormalization(token,false);					
 				}
 			} 			
 			out+=token+" ";

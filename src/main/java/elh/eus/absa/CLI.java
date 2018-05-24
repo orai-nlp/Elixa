@@ -26,7 +26,6 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -77,10 +76,11 @@ public class CLI {
 	/**
 	 * Argument parser instance.
 	 */
-	private ArgumentParser argParser = ArgumentParsers.newArgumentParser(
-			"elixa-" + version + ".jar").description(
-					"elixa-" + version
-					+ " is a multilingual ABSA module developed by the Elhuyar Foundation R&D Unit.\n");
+	private ArgumentParser argParser = ArgumentParsers.newFor("elixa-" + version + ".jar")
+			.build()
+				.defaultHelp(true)
+				.description("elixa-" + version
+					+ " is a multilingual document classification and ABSA module developed by the Elhuyar Foundation R&D Unit.\n");
 	/**
 	 * Sub parser instance.
 	 */
@@ -91,17 +91,17 @@ public class CLI {
 	 */
 	private Subparser annotateParser;
 	/**
-	 * The parser that manages the ATP (global polarity) training sub-command.
+	 * The parser that manages the document classifier training sub-command.
 	 */
-	private Subparser trainATPParser;
+	private Subparser trainDocParser;
 	/**
-	 * The parser that manages the ATP (global polarity) evaluation sub-command.
+	 * The parser that manages the document classifier evaluation sub-command.
 	 */
-	private Subparser evalATPParser;
+	private Subparser evalDocParser;
 	/**
-	 * The parser that manages the ATP (global polarity) tagging sub-command.
+	 * The parser that manages the document classifier tagging sub-command.
 	 */
-	private Subparser tagATPParser;
+	private Subparser tagDocParser;
 	/**
 	 * The parser that manages the ATC (target category classification) training sub-command.
 	 */
@@ -147,12 +147,12 @@ public class CLI {
 	public CLI() {
 		annotateParser = subParsers.addParser("tag-ate").help("Tagging CLI");
 		loadAnnotateParameters();
-		trainATPParser = subParsers.addParser("train-gp").help("ATP training CLI");
-		loadATPTrainingParameters();
-		evalATPParser = subParsers.addParser("eval-gp").help("ATP evaluation CLI");
-		loadATPevalParameters();
-		tagATPParser = subParsers.addParser("tag-gp").help("ATP Tagging CLI");
-		loadATPtagParameters();
+		trainDocParser = subParsers.addParser("train-doc").help("Document classification training CLI");
+		loadDocTrainingParameters();
+		evalDocParser = subParsers.addParser("eval-doc").help("Document classification evaluation CLI");
+		loadDocevalParameters();
+		tagDocParser = subParsers.addParser("tag-doc").help("Document tagging CLI");
+		loadDocTagParameters();
 		trainATCParser = subParsers.addParser("train-atc").help("ATC training CLI (single classifier)");
 		loadATCTrainingParameters();
 		trainATC2Parser = subParsers.addParser("train-atc2").help("ATC Training CLI (E & A classifiers");
@@ -198,16 +198,16 @@ public class CLI {
 			System.err.println("CLI options: " + parsedArguments);
 			if (args[0].equals("tagSentences")) {
 				tagSents(System.in);
-			} else if (args[0].equals("train-atp") || args[0].equals("train-gp")) {
-				trainATP(System.in);
-			} else if (args[0].equals("eval-atp") || args[0].equals("eval-gp")) {
-				evalATP(System.in);
+			} else if (args[0].equals("train-doc")) {
+				trainDoc(System.in);
+			} else if (args[0].equals("eval-doc")) {
+				evalDoc(System.in);
 			} else if (args[0].equals("train-atc")) {
 				trainATC(System.in);
 			} else if (args[0].equals("train-atc2")) {
 				trainATC2(System.in);
-			} else if (args[0].equals("tag-atp") || args[0].equals("tag-gp")) {
-				tagATP(System.in);
+			} else if (args[0].equals("tag-doc")) {
+				tagDoc(System.in);
 			} else if (args[0].equals("tag-ate")) {
 					tagATE(System.in, System.out);					
 			} else if (args[0].equals("slot2")) {
@@ -218,7 +218,7 @@ public class CLI {
 		} catch (ArgumentParserException e) {
 			argParser.handleError(e);
 			System.out.println("Run java -jar target/elixa-" + version
-					+ ".jar (train-atc|slot2|tagSentences|tag-ate|train-gp|eval-gp|tag-gp|tag-naf) -help for details");
+					+ ".jar (train-atc|slot2|tagSentences|tag-ate|train-doc|eval-doc|tag-doc|tag-naf) -help for details");
 			System.exit(1);
 		}
 	}
@@ -416,12 +416,12 @@ public class CLI {
 	
 	
 	/**
-	 * Main access to the polarity detection training functionalities.
+	 * Main access to the document classification training functionalities. Mainly designed for polarity
 	 *
 	 * @throws IOException
 	 * input output exception if problems with corpora
 	 */
-	public final void trainATP(final InputStream inputStream) throws IOException {
+	public final void trainDoc(final InputStream inputStream) throws IOException {
 		// load training parameters file
 		String paramFile = parsedArguments.getString("params");
 		String corpusFormat = parsedArguments.getString("corpusFormat");
@@ -436,10 +436,11 @@ public class CLI {
 		
 		Properties params = loadParameters(paramFile, lang);
 		String kafDir = setPoStaggingFolder(params,"train");
-				
+		System.err.println("trainDoc : potagging folder set to: "+kafDir);
+		
 		
 		CorpusReader reader = new CorpusReader(inputStream, corpusFormat, lang);
-		System.err.println("trainATP : Corpus read, creating features");
+		System.err.println("trainDoc : Corpus read, creating features");
 		Features atpTrain = new Features (reader, params, classes);			
 		Instances traindata;
 		if (corpusFormat.startsWith("tab") && !corpusFormat.equalsIgnoreCase("tabNotagged"))
@@ -482,23 +483,23 @@ public class CLI {
 	/**
 	 * Create the main parameters available for training ATP models.
 	 */
-	private void loadATPTrainingParameters() {
-		trainATPParser.addArgument("-p", "--params").required(true)
+	private void loadDocTrainingParameters() {
+		trainDocParser.addArgument("-p", "--params").required(true)
 		.help("Load the training parameters file\n");		
-		trainATPParser.addArgument("-cl","--classifier")
+		trainDocParser.addArgument("-cl","--classifier")
 		.required(false)
 		.choices("smo", "libsvm","linearsvm")
 		.setDefault("smo")
 		.help("Choose svm classifier. It defaults to weka smo implementation.\n");
-		trainATPParser.addArgument("-cp","--cparameter")
+		trainDocParser.addArgument("-cp","--cparameter")
 		.required(false)		
 		.setDefault("1")
 		.help("Choose svm classifier parameter c. It defaults to 1.\n");
-		trainATPParser.addArgument("-cvf", "--foldNum")
+		trainDocParser.addArgument("-cvf", "--foldNum")
 		.required(false)
 		.setDefault(10)
 		.help("Number of folds to run the cross validation on (default is 10).\n");
-		trainATPParser.addArgument("-v","--validation")
+		trainDocParser.addArgument("-v","--validation")
 		.required(false)
 		.choices("cross", "trainTest", "both")
 		.setDefault("cross")
@@ -506,23 +507,23 @@ public class CLI {
 				+ "\t - cross : 10 fold cross validation.\n"
 				+ "\t - trainTest : 90% train / 10% test division.\n"
 				+ "\t - both (default): both cross validation and train/test division will be tested.");
-		trainATPParser.addArgument("-f","--corpusFormat")
+		trainDocParser.addArgument("-f","--corpusFormat")
 		.required(false)
 		.choices("semeval2015", "semeval2014", "tab", "tabglobal", "tabNotagged", "globalNotagged")
 		.setDefault("semeval2015")
 		.help("Choose format of reference corpus; it defaults to semeval2015 format.\n");
-		trainATPParser.addArgument("-cn","--classnum")
+		trainDocParser.addArgument("-cn","--classnum")
 		.required(false)
 		.choices("3", "3+", "5+", "5", "binary")
 		.setDefault("3+none")
 		.help("Choose the number of classes the classifier should work on "
 				+ "(binary=p|n ; 3=p|n|neu ; 3+=p|n|neu|none ; 5=p|n|neu|p+|n+ ; 5+=p|n|neu|p+|n+|none )"
 				+ " it defaults to 3 (p|n|neu).\n");
-		trainATPParser.addArgument("-o","--outputpredictions")		
+		trainDocParser.addArgument("-o","--outputpredictions")		
 		.action(Arguments.storeTrue())
 		.setDefault("false")
 		.help("Output predictions or not; output is the corpus annotated with semeval2015 format.\n");
-		trainATPParser.addArgument("-l","--language")
+		trainDocParser.addArgument("-l","--language")
 		.setDefault("en")
 		.choices("de", "en", "es", "eu", "it", "nl", "fr")
 		.help("Choose language; if not provided it defaults to: \n"
@@ -533,12 +534,12 @@ public class CLI {
 	
 
 	/**
-	 * Main access to the polarity tagging functionalities. Target based polarity. 
+	 * Main access to the document classification evaluation functionality. Mainly polarity classification. 
 	 *
 	 * @throws IOException
 	 * input output exception if problems with corpora
 	 */
-	public final void evalATP(final InputStream inputStream) throws IOException, JDOMException {
+	public final void evalDoc(final InputStream inputStream) throws IOException, JDOMException {
 		
 		String paramFile = parsedArguments.getString("params");
 		String corpusFormat = parsedArguments.getString("corpusFormat");
@@ -634,7 +635,7 @@ public class CLI {
 			try {
 				WekaWrapper classify = new WekaWrapper(model,lang);	
 
-				System.err.println("evalAtp : going to test the model");
+				System.err.println("evalDoc : going to test the model");
 				//sort according to the instanceId
 				//traindata.sort(atpTrain.getAttIndexes().get("instanceId"));
 				//Instances testdata = new Instances(traindata);
@@ -684,43 +685,43 @@ public class CLI {
 	/**
 	 * Create the main parameters available for training ATP models.
 	 */
-	private void loadATPevalParameters() {
-		evalATPParser.addArgument("-p", "--params")
+	private void loadDocevalParameters() {
+		evalDocParser.addArgument("-p", "--params")
 		.setDefault("default")
 		.help("Load the training parameters file\n");
-		evalATPParser.addArgument("-cl","--classifier")
+		evalDocParser.addArgument("-cl","--classifier")
 		.required(false)
 		.choices("smo", "libsvm","linearsvm")
 		.setDefault("smo")
 		.help("Choose svm classifier. It defaults to weka smo implementation.\n");
-		evalATPParser.addArgument("-m", "--model")
+		evalDocParser.addArgument("-m", "--model")
 		.setDefault("default")
 		.help("The pretrained model we want to test.\n");
-		//evalATPParser.addArgument("-t", "--testset")
+		//evalDocParser.addArgument("-t", "--testset")
 		//.required(false)
 		//.help("The test corpus to evaluate our model.\n");
-		evalATPParser.addArgument("-f","--corpusFormat")
+		evalDocParser.addArgument("-f","--corpusFormat")
 		.required(false)
 		.choices("semeval2015", "semeval2014", "tab", "tabglobal", "tabNotagged","globalNotagged")
 		.setDefault("semeval2015")
 		.help("Choose format of the test corpus; it defaults to semeval2015 format.\n");
-		evalATPParser.addArgument("-cn","--classnum")
+		evalDocParser.addArgument("-cn","--classnum")
 		.required(false)
 		.choices("3", "3+", "5+", "5", "binary")
 		.setDefault("3+none")
 		.help("Choose the number of classes the classifier should work on "
 				+ "(binary=p|n ; 3=p|n|neu ; 3+=p|n|neu|none ; 5=p|n|neu|p+|n+ ; 5+=p|n|neu|p+|n+|none )"
 				+ " it defaults to 3 (p|n|neu).\n");
-		evalATPParser.addArgument("-r","--ruleBasedClassifier")		
+		evalDocParser.addArgument("-r","--ruleBasedClassifier")		
 		.action(Arguments.storeTrue())
 		.setDefault(false)
 		.help("Whether rule based classifier should be used instead of the default ML classifier."
 				+ " A polarity lexicon is mandatory if the rule based classifier is used.\n");
-		evalATPParser.addArgument("-o","--outputPredictions")		
+		evalDocParser.addArgument("-o","--outputPredictions")		
 		.action(Arguments.storeTrue())
 		.setDefault(false)
 		.help("Output predictions or not; output is the corpus annotated with semeval2015 format.\n");
-		evalATPParser.addArgument("-l","--language")
+		evalDocParser.addArgument("-l","--language")
 		.setDefault("en")
 		.choices("de", "en", "es", "eu", "it", "nl", "fr")
 		.help("Choose language; if not provided it defaults to: \n"
@@ -730,13 +731,13 @@ public class CLI {
 	
 	
 	/**
-	 * Main access to the polarity tagging functionalities. Target based polarity. 
+	 * Main access to the document tagging functionalities. Target based polarity. 
 	 *
 	 * @throws IOException
 	 * input output exception if problems with corpora
 	 * @throws JDOMException 
 	 */
-	public final void tagATP(final InputStream inputStream) throws IOException, JDOMException {
+	public final void tagDoc(final InputStream inputStream) throws IOException, JDOMException {
 		// load training parameters file
 		String paramFile = parsedArguments.getString("params");
 		String corpusFormat = parsedArguments.getString("corpusFormat");
@@ -877,31 +878,31 @@ public class CLI {
 	/**
 	 * Create the main parameters available for training ATP models.
 	 */
-	private void loadATPtagParameters() {
-		tagATPParser.addArgument("-p", "--params")
+	private void loadDocTagParameters() {
+		tagDocParser.addArgument("-p", "--params")
 		.setDefault("default")
 		.help("Load the training parameters file\n");
-		tagATPParser.addArgument("-f","--corpusFormat")
+		tagDocParser.addArgument("-f","--corpusFormat")
 		.required(false)
 		.choices("semeval2015", "semeval2014", "tab", "tabglobal", "tabNotagged", "ireom", "globalNotagged")
 		.setDefault("semeval2015")
 		.help("Choose format of reference corpus; it defaults to semeval2015 format.\n");
-		tagATPParser.addArgument("-m","--model")		
+		tagDocParser.addArgument("-m","--model")		
 		.setDefault("default")
 		.help("Pre trained model to classify corpus opinions with. Features are extracted from the model\n");
-		tagATPParser.addArgument("-r","--ruleBasedClassifier")		
+		tagDocParser.addArgument("-r","--ruleBasedClassifier")		
 		.action(Arguments.storeTrue())
 		.setDefault(false)
 		.help("Whether rule based classifier should be used instead of the default ML classifier."
 				+ " A polarity lexicon is mandatory if the rule based classifier is used.\n");
-		tagATPParser.addArgument("-cn","--classnum")
+		tagDocParser.addArgument("-cn","--classnum")
 		.required(false)
 		.choices("3", "3+", "5+", "5", "binary")
 		.setDefault("3+none")
 		.help("Choose the number of classes the classifier should work on "
 				+ "(binary=p|n ; 3=p|n|neu ; 3+=p|n|neu|none ; 5=p|n|neu|p+|n+ ; 5+=p|n|neu|p+|n+|none )"
 				+ " it defaults to 3 (p|n|neu).\n");		
-		tagATPParser.addArgument("-l","--language")
+		tagDocParser.addArgument("-l","--language")
 		.setDefault("en")
 		.choices("de", "en", "es", "eu", "it", "nl", "fr")
 		.help("Choose language; if not provided it defaults to: \n"
