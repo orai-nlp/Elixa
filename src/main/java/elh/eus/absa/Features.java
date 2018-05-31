@@ -1025,6 +1025,7 @@ public class Features {
 			if (params.containsKey("lemmaNgrams")
 					||params.containsKey("wfngrams")
 					||params.containsKey("chrngrams")
+					||params.containsKey("polNgrams")
 					||!params.getProperty("pos","0").equalsIgnoreCase("0")
 					||!params.getProperty("posFilter","none").equalsIgnoreCase("none"))
 			{
@@ -1157,7 +1158,8 @@ public class Features {
 			}
 			
 			for (WF wf : window)
-			{	
+			{
+				
 				windowWFIds.add(wf.getId());
 				
 				String wfStr = wf.getForm();
@@ -1207,6 +1209,7 @@ public class Features {
 					params.containsKey("polarLexiconGeneral") ||
 					params.containsKey("polarLexiconDomain"))
 			{
+
 				ngrams = new LinkedList<String>();
 				if (params.containsKey("lemmaNgrams")&& (!params.getProperty("lemmaNgrams").equalsIgnoreCase("0")))
 				{
@@ -1222,9 +1225,11 @@ public class Features {
 				{
 					posNgramDim = Integer.valueOf(params.getProperty("pos"));
 				}
-										
+						
 				for (Term t : nafinst.getTermsFromWFs(windowWFIds))
 				{	
+					System.err.println("loadInstances: lemma related features - term loop");
+
 					//lemmas // && (!params.getProperty("lemmaNgrams").equalsIgnoreCase("0"))
 					if ((params.containsKey("lemmaNgrams")) || params.containsKey("polarLexiconGeneral") || params.containsKey("polarLexiconDomain"))
 					{
@@ -1253,6 +1258,7 @@ public class Features {
 							ng = featureFromArray(ngrams.subList(0, i+1), "");
 							if (params.containsKey("polarLexiconGeneral") || params.containsKey("polarLexiconDomain"))
 							{
+								System.err.println("checking polarity lexicons for ngram - "+ng);
 								checkPolarityLexicons(ng, values, tokNum, polNgrams);
 							} //end polarity ngram checker
 						} //end ngram checking				        						
@@ -2966,6 +2972,7 @@ public class Features {
 
 				if (ngrams)
 				{
+					
 					fVector[getAttIndexes().get("polgen_"+wrd)]++;
 				}
 			}
