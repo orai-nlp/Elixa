@@ -3196,7 +3196,7 @@ public class Features {
 		String nafPath = nafDir+File.separator+sId.replace(':', '_');	
 		if (FileUtilsElh.checkFile(nafPath+".kaf"))
 		{
-			System.err.println("NLPpipelineWrapper::NormalizeAndTag : tagged file exists:"+nafPath+".kaf");
+			//System.err.println("NLPpipelineWrapper::NormalizeAndTag : tagged file exists:"+nafPath+".kaf");
 			return 2;
 		}
 		
