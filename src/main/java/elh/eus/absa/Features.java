@@ -1228,7 +1228,7 @@ public class Features {
 						
 				for (Term t : nafinst.getTermsFromWFs(windowWFIds))
 				{	
-					System.err.println("loadInstances: lemma related features - term loop");
+					//System.err.println("loadInstances: lemma related features - term loop");
 
 					//lemmas // && (!params.getProperty("lemmaNgrams").equalsIgnoreCase("0"))
 					if ((params.containsKey("lemmaNgrams")) || params.containsKey("polarLexiconGeneral") || params.containsKey("polarLexiconDomain"))
@@ -1258,7 +1258,7 @@ public class Features {
 							ng = featureFromArray(ngrams.subList(0, i+1), "");
 							if (params.containsKey("polarLexiconGeneral") || params.containsKey("polarLexiconDomain"))
 							{
-								System.err.println("checking polarity lexicons for ngram - "+ng);
+								//System.err.println("checking polarity lexicons for ngram - "+ng);
 								checkPolarityLexicons(ng, values, tokNum, polNgrams);
 							} //end polarity ngram checker
 						} //end ngram checking				        						
