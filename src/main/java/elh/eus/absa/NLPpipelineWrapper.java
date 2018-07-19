@@ -503,6 +503,11 @@ public final class NLPpipelineWrapper {
 	 *  A tagged file is generated for each sentence in the corpus and stored in the directory
 	 *  given as argument. Sentence Ids are used as file names. If a tagged file already exists 
 	 *  that sentence is not tagged 
+	 *  
+	 *  return codes: 
+	 *          0 = there was an error in the tagging process.
+	 *          1 = sentence correctly tagged
+	 *          2 = a tagged file existed already, so no tagging was done.
 	 * 
 	 * @param nafdir : path to the directory were tagged files should be stored
 	 * @param posModel : model to be used by the PoS tagger
@@ -516,8 +521,8 @@ public final class NLPpipelineWrapper {
 		//System.err.println(posModel);
 		if (FileUtilsElh.checkFile(savePathNoExt+".kaf"))
 		{
-			System.err.println("NLPpipelineWrapper::tagSentence : file already there:"+savePathNoExt+".kaf");
-			return 1;
+			//System.err.println("NLPpipelineWrapper::tagSentence : file already there:"+savePathNoExt+".kaf");
+			return 2;
 		}
 		
 		/* if language is basque 'posModel' argument can be used to pass the path to the 

@@ -58,6 +58,8 @@ import java.util.regex.Pattern;
 import org.apache.commons.io.IOUtils;
 import org.jdom2.JDOMException;
 
+import com.google.common.base.Charsets;
+
 
 
 /**
@@ -459,13 +461,18 @@ public class Features {
         	long startTime = System.currentTimeMillis();
 
         	long tagged = 0;
+        	int previouslyTagged=0;
         	// SEQUENTIAL NORMALIZATION AND POS TAGGING        	
         	for (Iterator<Entry<String, String>> it = corpus.getSentences().entrySet().iterator(); it.hasNext();)
     		{									
     			Map.Entry<String, String> sntnc = it.next();
     			String sId = sntnc.getKey();
     			//System.err.print("\r normalize and tagging "+sId);
-        		long success = normalizeAndTag(sId,nafDir);
+        		int success = normalizeAndTag(sId,nafDir);
+        		if (success == 2)
+        		{
+        			previouslyTagged++;
+        		}
         		if (success == 0)
         		{
         			it.remove();
@@ -481,6 +488,7 @@ public class Features {
         	long endTime = System.currentTimeMillis();
         	System.err.println("Features::createFeatureSet() - sentence normalization and tagging done: "
         			+(double)(endTime-startTime)/1000 + " seconds, "+tagged+" sentences tagged");
+        	System.err.println("Features::createFeatureSet() - total sentences found that were previously tagged: "+previouslyTagged);
         }
         
         // character ngram features
@@ -980,6 +988,7 @@ public class Features {
 		boolean upperCaseRatio= params.getProperty("upperCaseRatio", "no").equalsIgnoreCase("yes");
 		
 		int instId = 1;
+		int previouslyTagged=0;
 		// fill the vectors for each training example
 		for (Iterator<Entry<String, Opinion>> it = trainExamples.entrySet().iterator(); it.hasNext();)
 		{									
@@ -1031,7 +1040,10 @@ public class Features {
 			{
 				if (!FileUtilsElh.checkFile(nafPath)) {
 					long success = normalizeAndTag(corpus.getOpinion(oId).getsId(), nafDir);
-					if (success == 0) {
+					if  (success == 2) {
+						previouslyTagged++;
+					}
+					else if (success == 0) {
 						it.remove();
 						System.err.println("error when tagging opinion " + oId
 								+ ". Opinion removed from training set, features can not be extracted.");
@@ -1360,9 +1372,11 @@ public class Features {
 			this.opInst.put(oId, instId);
 			instId++;
 		}
-
+		
 		System.err.println("Features : loadInstances() - training data ready total number of examples -> "
 				+trainExamplesNum+" - "+rsltdata.numInstances()+"\n\t empty or incorrectly tagged opinions: "+tagFails);
+		System.err.println("Features : loadInstances() - training data ready total number of examples previously tagged -> "+previouslyTagged);
+
 		
 		if (save)
 		{
@@ -1428,6 +1442,7 @@ public class Features {
 		//System.out.println("Features: loadInstancesConll() - featNum: "+this.featNum+" - trainset attrib num -> "+rsltdata.numAttributes()+" - ");
 				
 		int instId = 1;
+		int previouslyTagged = 0;
 		// fill the vectors for each training example
 		for (String oId : trainExamples.keySet())
 		{									
@@ -1467,13 +1482,17 @@ public class Features {
 								corpus.getLang(), params.getProperty("pos-model", "default"), params.getProperty("lemma-model", "default"),
 								postagger);
 					}
-
-					if (success != 1) {
+					
+					if (success == 2) {
+						previouslyTagged++;
+					}
+					else if (success < 1) {
 						trainExamples.remove(oId);
 					}
+					
 					nafPath = nafPath + ".kaf";
 					InputStream reader = new FileInputStream(new File(nafPath));
-					taggedFile = IOUtils.toString(reader);
+					taggedFile = IOUtils.toString(reader,Charsets.UTF_8);
 					reader.close();
 				} catch (IOException | JDOMException fe) {					
 					fe.printStackTrace();
@@ -1756,9 +1775,11 @@ public class Features {
 			this.opInst.put(oId, instId);
 			instId++;
 		}
-
+	
 		System.err.println("Features : loadInstancesConll() - training data ready total number of examples -> "+trainExamplesNum+
 				" - "+rsltdata.numInstances());
+		System.err.println("Features : loadInstancesConll() - total number of files that were previously tagged -> "+previouslyTagged);
+
 		
 		if (save)
 		{
@@ -3161,7 +3182,7 @@ public class Features {
 	 * Function o normalize and tag a sentence (normalization is only done if so selected) 
 	 * @param sentence
 	 */
-	private long normalizeAndTag (String sId, String nafDir)
+	private int normalizeAndTag (String sId, String nafDir)
 	{
 		//System.err.println("Features::normalizeAndTag corpus size: "+corpus.getSentences().size());
 		String currentSent=corpus.getSentence(sId);
@@ -3176,7 +3197,7 @@ public class Features {
 		if (FileUtilsElh.checkFile(nafPath+".kaf"))
 		{
 			System.err.println("NLPpipelineWrapper::NormalizeAndTag : tagged file exists:"+nafPath+".kaf");
-			return 1;
+			return 2;
 		}
 		
 		
@@ -3195,7 +3216,7 @@ public class Features {
 		try {
 			int success = NLPpipelineWrapper.tagSentence(currentSent, nafPath, corpus.getLang(),  params.getProperty("pos-model", "default"), params.getProperty("lemma-model", "default"), postagger);
 			//System.err.println("Features::normalizeAndTag -> "+sId+" document tagging done "+success);		
-			return (long)success; //success
+			return success; //success
 		} catch (JDOMException e) {
 			System.err.println("Features::normalizeAndTag -> NAF error when tagging sentence");
 			e.printStackTrace();
