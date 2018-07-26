@@ -472,8 +472,9 @@ public class Features {
         		if (success == 2)
         		{
         			previouslyTagged++;
+        			success --; //once counted make success = 1 in order to maintain the number of correctly tagged files.
         		}
-        		if (success == 0)
+        		else if (success == 0)
         		{
         			it.remove();
         		//	corpus.removeSentence(key);
@@ -1039,7 +1040,7 @@ public class Features {
 					||!params.getProperty("posFilter","none").equalsIgnoreCase("none"))
 			{
 				if (!FileUtilsElh.checkFile(nafPath)) {
-					long success = normalizeAndTag(corpus.getOpinion(oId).getsId(), nafDir);
+					int success = normalizeAndTag(corpus.getOpinion(oId).getsId(), nafDir);
 					if  (success == 2) {
 						previouslyTagged++;
 					}
@@ -1062,6 +1063,7 @@ public class Features {
 				} else {
 					try {
 						nafinst = KAFDocument.createFromFile(new File(nafPath));
+						previouslyTagged++;
 					} catch (IOException ioe ) {
 						System.err.println("Features::createFeatureSet -> error when reading naf for opinion " + oId
 								+ " opinion will be deleted from training set");
@@ -1373,9 +1375,9 @@ public class Features {
 			instId++;
 		}
 		
-		System.err.println("Features : loadInstances() - training data ready total number of examples -> "
+		System.err.println("Features : loadInstances() - training data ready, total number of examples -> "
 				+trainExamplesNum+" - "+rsltdata.numInstances()+"\n\t empty or incorrectly tagged opinions: "+tagFails);
-		System.err.println("Features : loadInstances() - training data ready total number of examples previously tagged -> "+previouslyTagged);
+		System.err.println("Features : loadInstances() - training data ready, total number of examples previously tagged -> "+previouslyTagged);
 
 		
 		if (save)
@@ -1502,6 +1504,7 @@ public class Features {
 			}
 			else
 			{
+				previouslyTagged++;
 				noWindow = corpus.getOpinionSentence(oId).split("\n");
 			}
 			//counter for opinion sentence token number. Used for computing relative values of the features
@@ -1776,7 +1779,7 @@ public class Features {
 			instId++;
 		}
 	
-		System.err.println("Features : loadInstancesConll() - training data ready total number of examples -> "+trainExamplesNum+
+		System.err.println("Features : loadInstancesConll() - training data ready, total number of examples -> "+trainExamplesNum+
 				" - "+rsltdata.numInstances());
 		System.err.println("Features : loadInstancesConll() - total number of files that were previously tagged -> "+previouslyTagged);
 
