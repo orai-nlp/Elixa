@@ -121,7 +121,7 @@ public class Features {
 	// feature number
 	private int featNum;
 	
-	// if urls shoul be a feature or not
+	// if urls should be a feature or not
 	private boolean discardUrls;
 	
 	//Some pattern used during feature extraction
@@ -161,7 +161,7 @@ public class Features {
 		params = params2;
 		String norm = params.getProperty("normalization", "none");
 		// preprocess
-		if (norm.matches("(?i)(all|noHashtag)")) {
+		if (norm.matches("(?i)(all|noHashtag|urlEmot)")) {
 			MicrotxtNormalizer = new MicroTextNormalizer(corpus.getLang());
 			MicrotxtNormalizer.setEmodict(this.getClass().getClassLoader().getResourceAsStream("emoticons.lex"));
 		} else if (norm.compareTo("none") != 0) {
@@ -218,7 +218,7 @@ public class Features {
 
 		String norm = params.getProperty("normalization", "none") ;
 		//preprocess
-		if (norm.matches("(?i)(all|noHashtag)"))
+		if (norm.matches("(?i)(all|noHashtag|urlEmot)"))
 		{
 			MicrotxtNormalizer = new MicroTextNormalizer(corpus.getLang());
 			MicrotxtNormalizer.setEmodict(this.getClass().getClassLoader().getResourceAsStream("emoticons.lex"));					 

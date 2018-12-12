@@ -436,7 +436,7 @@ public class CLI {
 		
 		Properties params = loadParameters(paramFile, lang);
 		String kafDir = setPoStaggingFolder(params,"train");
-		System.err.println("trainDoc : potagging folder set to: "+kafDir);
+		System.err.println("trainDoc : pos tagging folder set to: "+kafDir);
 		
 		
 		CorpusReader reader = new CorpusReader(inputStream, corpusFormat, lang);
