@@ -886,7 +886,8 @@ public class CLI {
 		.required(false)
 		.choices("semeval2015", "semeval2014", "tab", "tabglobal", "tabNotagged", "ireom", "globalNotagged")
 		.setDefault("semeval2015")
-		.help("Choose format of reference corpus; it defaults to semeval2015 format.\n");
+		.help("Choose format of reference corpus; it defaults to semeval2015 format.\n"
+				+ "");
 		tagDocParser.addArgument("-m","--model")		
 		.setDefault("default")
 		.help("Pre trained model to classify corpus opinions with. Features are extracted from the model\n");

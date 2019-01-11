@@ -1,13 +1,51 @@
-Elixa 0.9.1 (2017/04/11):
+EliXa version 1.0. (2019/01/11):
+	- Major refactoring : train, eval and tag functionality are generalized to document classifier, not strictly attache to polarity classification. Still polarity is our main focus.
+	- 3b99f4f (HEAD -> dev, origin/dev) fixed bug with normalization parameters. Corrected some documentation typos
+	- 045c994 minimum changes in Features.java in order to control the pos tagging process.
+	- c1c11e0 fixed bug for checking polarity lexicon based ngrams when no other ngrams are active
+	- 7c1a6c6 major changes in command line interface, version updated to 1.0
+	- 932f846 added c parameter option to svm configuration. Added liblinear implementation of linear svm, for faster trainings
+	- 8d366db added libsvm algorithm to weka wrapper. bug fixes
+	- 59bf256 added class for tf-idf computation. For the moment only df is implemented. A few bug fixes as well
+	- fc35236 found bug in uppercaseratio attribute. not solved. Added tagging control before normalization
+
+EliXa version 0.9.3 (2018/05/14):
+
+83b45d8 (origin/master, origin/HEAD, master) version 0.9.3; bug fixes, added character ngram extraction.
+dc43f29 added char-ngrams to features, several code cleanings
+73fdc04 added char-ngrams to features, several code cleanings
+bb245a9 updated dependency versions. changed apache commons-lang to commons-text. returned kaflib to maven dep and fixing ixa-pipe-pos
+8c8b9d9 updated readme
+96cf7d0 updated readme
+099bd99 updated readme
+451e773 added naf jdom parse error treatment to Features::loadInstances function; there may be other places where this is needed
+5c90515 correcting readme typos
+00ce72b added release info to readme
+
+EliXa version 0.9.2 (2017/07/21):
+
+	- db75283 default lexicons are available. Full binary created for version 0.9.2
+	- d197373 default polarity lexicons read from jar. Still need to improve lexicon file names per language
+	- da95c5a fixed but on stopword parsing
+	- b8d1d99 fixed bug for eu trai-gp parameter parsing (pos-model)
+	- 1a7e6b3 added temporal folder creation for tagged files to all tgp functionalities
+	- afde162 default polarity models added if included when packaging, changed Corpus implementation from hashmap to linkedhasmap, to print results in order.
+	- 5fe4a0b Added test script
+	- 7fb030e pos and lemma models are optional, if not specified default version will be used. Default versions need to be put in resources before mvn packaging
+	- 013441e fixed bug in tag-gp functionality
+	- f506839 added example files to resources. Changed path to store arff files (duplicated dir removed).
+	- a74a4fb updated exampleConfig.cfg to the new ixapipes parameters
+
+EliXa version 0.9.1 (2017/04/11):
 	- Lemma and pos models are now optional. If not specified each languages' default version will be used. Default versions still need to be unpacked in the resources version before executen "mvn clean package" command, an specific model package has been compiled for this purpose. A binary release will include this models in the near future.
 	
-Elixa 0.9 (2017/04/03):
+EliXa version 0.9 (2017/04/03):
 	- Updated ixa-pipes to the last version (1.5.0)
 	- Included Basque Ixa-pipe (eustagger tagging is still available, if ixa-pipe-pos-eu or eustagger-lite are installed in the system)
 	- Sentiment modifier treatment added to feature extraction (modifiers must be defined in the polarity lexicon (WEA|INC|SHI)
 	- Kaflib-naf is included in the source code because of invalid xml issues (a modified version is used which includes xml validation)
 	
-Elixa 0.5 (2016/08/29):
+EliXa version 0.5 (2016/08/29):
 	- First working version.
 	- Ixa-pipe-pos 1.4.6 models are used.
 	- Basque NLP chain need external program eustagger_lite
