@@ -121,7 +121,7 @@ public class CLI {
 	
 	
 	/**
-	 * Parser that manages the polarity tagging and estimation of a text (kaf format for the moment).
+	 * Parser that manages the polarity tagging and estimation of a text (KAF/NAF format for the moment).
 	 */
 	private Subparser predictParser;
 	
@@ -233,6 +233,7 @@ public class CLI {
 		//String dictw = parsedArguments.getString("weights");
 		float threshold = parsedArguments.getFloat("threshold");
 		boolean printPol = parsedArguments.getBoolean("estimatePolarity");
+		boolean polarWrds = parsedArguments.getBoolean("polarWords");
 		
 		//System.out.println("Polarity Predictor: ");
 		//BufferedReader freader = new BufferedReader(new FileReader(files));   		
@@ -245,7 +246,15 @@ public class CLI {
 				File lexFile = new File(lexicon);
 				Evaluator evalDoc = new Evaluator(lexFile, synset, threshold, "avg");
 				Map<String, String> results = evalDoc.processKaf(naf, lexFile.getName());
-				naf.print();
+				if (polarWrds)
+				{
+					FileUtilsElh.printPolarWordsFromNaf(naf);
+				}
+				else
+				{
+					naf.print();					
+				}
+				
 				if (printPol)
 				{
 					System.out.println("<Elixa-gp>\n"
@@ -273,21 +282,10 @@ public class CLI {
 	}
 	
 	private void loadPredictionParameters() {
-		/*
-		 *  Parameters:
-	        - Input File (-f | --file= ): File containing the a list of text files in KAF format whose polarity we want to estimate.    
-	        - dict file  (-l | --lexicon= ): path to the polarity lexicon.
-	        - Synset polarities (-s | --synset=): default polarities are calculated over lemmas. With this option polarity of synsets is taken into account instead of words. It has two posible values: (first|rank). 'first' uses the sense with the highest confidence value for the lemma. 'rank' uses complete ranking of synsets.
-	        - Dictionary weights (-w | --weights): use polarity weights instead of binary polarities (pos/neg). If the dictionary does not provide polarity scores the program defaults to binary polarities.
-	        - Threshold (-t | --threshold=) [-1,1]: Threshold which limits positive and negative reviews. Default value is 0.
-	        - Polarity score estimator (-e| --estimator) [avg|moh]: average polarity ratio or estimator proposed in (Mohammad et al.,2009 - EMNLP) 
-
-		 * 
-		 */		  
-
+	
 		//predictParser.addArgument("-f", "--file")
 		//.required(true)
-		//.help("Input file to predict the polarity lexicon.\n");
+		//.help("Input file to predict the polarity lexicon in KAF/NAF format.\n");
 
 		predictParser.addArgument("-l", "--lexicon")
 		.required(true)
@@ -318,6 +316,10 @@ public class CLI {
 				"print a polarity estimation based on a simple average word polarity count (from words in the lexicon given).\n"
 				+ "WARNING: this polarity estimation is for test purposes. If you activate it an additional element will be "
 				+ "printed with the estimation statistics <Elixa-gp>, but the resulting naf won't be valid if that line is not deleted.\n");
+		
+		predictParser.addArgument("-p", "--polarWords")
+		.action(Arguments.storeTrue())
+		.help("Print list of polar words in the NAF file instead of returning the NAF file with tagged sentiment words\n.");
 	}
 
 
@@ -357,7 +359,9 @@ public class CLI {
 		tagSentParser.addArgument("-f", "--format")
 		.setDefault("tabNotagged")
 		.choices("tabNotagged", "semeval2015")	
-		.help("format of the input corpus.\n");
+		.help("format of the input corpus.\n"
+				+ "\ttabNotagged = \"id<tab>polarity<tab>text[<tab>addittionalfields]\" (polarity may be '?' if unknown)\n"
+				+ "\tsemeval2015 = Semeval 2015 ABSA shared task xml format.\n");
 		tagSentParser.addArgument("-p", "--print")
 		.action(Arguments.storeTrue())
 		.help("Whether the tagged files should be printed as a corpus.\n");
@@ -510,8 +514,28 @@ public class CLI {
 		trainDocParser.addArgument("-f","--corpusFormat")
 		.required(false)
 		.choices("semeval2015", "semeval2014", "tab", "tabglobal", "tabNotagged", "globalNotagged")
-		.setDefault("semeval2015")
-		.help("Choose format of reference corpus; it defaults to semeval2015 format.\n");
+		.setDefault("tabNotagged")
+		.help("Choose format of reference corpus; it defaults to semeval2015 format.\n"
+				+ "	- tabNotagged = \"id<tab>polarity<tab>text[<tab>addittionalfields]\" (polarity may be '?' or 'null' if unknown). "
+				+ "Text is raw text. If this format is used, Elixa takes care of linguistically tagging the texts through ixa-pipes.\n"
+				+ "	- semeval2014 = Semeval 2014 ABSA shared task xml format.\n"
+				+ "	- semeval2015 = Semeval 2015 ABSA shared task xml format.\n"
+				+ "	- globalNotagged|ireom = \"id<tab>text\" per line, Same as tabNotagged, but without polarity annotations.\n"				
+				+ "	- tabGlobal = Already linguistically tagged corpus in conll format (if you have a corpus tagged with a tagger other than ixa-pipes for example)."
+				+ "A pseudo xml format is used to pass document boundaries and polarity annotations. The format of the corpus must be as follows:\n\n" + 
+				"	<doc id=\"([^\"]+)\" (pol|polarity)=\"([^\"]+)\"( score=\"([^\"]+)\")?>\n" + 
+				"	form<tab>lemma<tab>PoS\n" + 
+				"	form<tab>lemma<tab>PoS\n" + 
+				"	...	   \n" + 
+				"	</doc>\n" + 
+				"	...\n\n" + 
+				"	where\n" + 
+				"		- id is any character string ([^\"]+)\n" + 
+				"		- \"pol|polarity\" = pos,neg,neu \n" + 
+				"		- score is the same as polarity but in a numeric scale (e.g. [1..5])\n"
+				+ "	- tab = \"id<tab>polarity<tab>text[<tab>addittionalfields]\" (polarity may be '?' or 'null' if unknown)\n"
+				);
+
 		trainDocParser.addArgument("-cn","--classnum")
 		.required(false)
 		.choices("3", "3+", "5+", "5", "binary")

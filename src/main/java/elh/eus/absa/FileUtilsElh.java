@@ -170,6 +170,51 @@ public final class FileUtilsElh {
 		//file1.renameTo(file2);		 
 	}
 	
+	
+
+	/**
+	 * Function prints a list of polar words from an input naf to standard output
+	 * 
+	 * @param doc
+	 * @throws Exception
+	 * @throws JDOMException
+	 */
+	public static void printPolarWordsFromNaf(KAFDocument doc) throws Exception, JDOMException
+	{
+		String toprint = "";
+
+		for (Term term : doc.getTerms())
+		{ 
+			if (term != null && term.hasSentiment() && (term.getSentiment().hasPolarity() || term.getSentiment().hasSentimentModifier()))
+			{
+				String tPol="";
+				if (term.getSentiment().hasPolarity())
+				{
+					tPol = term.getSentiment().getPolarity();
+				}
+				else if (term.getSentiment().hasSentimentModifier())
+				{
+					tPol = term.getSentiment().getSentimentModifier();
+				}
+				else //this should never be fulfilled. If so forget this term.
+				{
+					continue;
+				}
+				toprint=term.getLemma()+"	"+tPol;
+				// Commented code prints found sentiment term word forms
+				//toprint="";				
+				//for (WF form : term.getWFs())
+				//{
+				//	toprint+=form.getForm()+" ";
+				//}
+				//toprint = toprint.trim()+"	"+tPol;
+				System.out.println(toprint);
+			}
+		}	
+	}
+	
+	
+	
 	/**
 	 * Function prints a kaf document containing sentiment annotations to a colored html file.
 	 *  

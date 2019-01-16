@@ -423,7 +423,7 @@ public class Lexicon {
 	 * Add entry to lexicon. If the key already exists it replaces the polarity with the new value.
 	 *
 	 * @param key : lemma or offset
-	 * @param pol : scalar polarity (pos|neg|neu|mod|shi)
+	 * @param pol : scalar polarity (pos|neg|neu|wea|int|shi)
 	 * @param syn : whether lemmas or senses (offset) should be stored in the lexicon.
 	 * @return : int. 0 success, 1 error, 2 ok, but entry not included (no offset or lemma, or neutral polarity).
 	 */
@@ -456,7 +456,7 @@ public class Lexicon {
 	 * Add entry to lexicon. If the key already exists it replaces the polarity with the new value.
 	 * 
 	 * @param key (String): lemma or synset to add to the lexicon.
-	 * @param pol String (pos|neg|neu|mod|shi): polarity of the new entry 
+	 * @param pol String (pos|neg|neu|wea|int|shi): polarity of the new entry 
 	 * @param scoreValue String: polarity score
 	 * @param syn String (lemma|first|mfs|rank): type of the entry (first, mfs and rank) are represented by WN synsets 
 

@@ -16,7 +16,7 @@ The contents of the module are the following:
 
 # INSTALLATION
 
-IMPORTANT NOTE: if you only want to try EliXa or use it as it is, just download the [latest release](https://github.com/Elhuyar/Elixa/releases/download/v0.9.2/elixa-0.9.2-full.jar) and go directly to ["Using EliXa"](https://github.com/Elhuyar/Elixa#using-elixa) section of this README. Java JRE>=1.7 is required to run EliXa, although JRE 1.8 is recommended. 
+IMPORTANT NOTE: if you only want to try EliXa or use it as it is, just download the [latest release](https://github.com/Elhuyar/Elixa/releases/download/v1.0/elixa-1.0-full.jar) and go directly to ["Using EliXa"](https://github.com/Elhuyar/Elixa#using-elixa) section of this README. Java JRE>=1.7 is required to run EliXa, although JRE 1.8 is recommended. 
 
 Installing EliXa requires the following steps:
 
@@ -167,7 +167,7 @@ This step will create a directory called `target/` which contains various direct
 Most importantly, there you will find the module executable:
 
 ```shell
-elixa-0.9.2.jar
+elixa-1.0.jar
 ```
 
 This executable contains every dependency the module needs, so it is completely portable as long
@@ -181,7 +181,7 @@ mvn clean install
 
 ## 7. Test installation
 
-In order to test the Installation, a simple script is provided (test_Elixa.sh). The script will run EliXa and tag the files in the `src/main/resources/examples` folder. The script assumes the executable is in the target directory (`target/elixa-0.9.2.jar`) and that models and their configurations have been unpacked in the installation directory (`./elixa-models-0.9`)
+In order to test the Installation, a simple script is provided (test_Elixa.sh). The script will run EliXa and tag the files in the `src/main/resources/examples` folder. The script assumes the executable is in the target directory (`target/elixa-1.0.jar`) and that models and their configurations have been unpacked in the installation directory (`./elixa-models-0.9`)
 
 ```shell
 sh test_Elixa.sh
@@ -199,14 +199,14 @@ sh test_Elixa.sh
 EliXa aims to provide 4 main functionalities:
 
    - **ate**: Aspect term extraction (term category classification included.
-   - **atp**: Aspect term polarity
+   - **atp**: Aspect term polarity.
    - **tgp**: Text global polarity.
 
 Currently the following commands are available:
 
-    train-gp	 TGP training CLI
-    eval-gp	 TGP evaluation CLI
-    tag-gp   	 TGP Tagging CLI
+    train-doc	 TGP training CLI
+    eval-doc	 TGP evaluation CLI
+    tag-doc   	 TGP Tagging CLI
     slot2                Semeval 2015 slot2 (ATE) formatting CLI
     tagSentences         Lemmatization and PoS tagging CLI
     tag-naf              Predict polarity of a text in naf format 
@@ -214,13 +214,13 @@ Currently the following commands are available:
 
 ## Example uses
 
-### tag-gp 
+### tag-doc 
 
-Tag-gp command is intended to tag new examples with a pre-existing model. The examples can be either sentences or full texts. For each examples the system will return a polarity class depending on the model we use (typically p|neu|n). 
+Tag-doc command is intended to tag new examples with a pre-existing model. The examples can be either sentences or full texts. For each examples the system will return a polarity class depending on the model we use (typically p|neu|n). 
 
 
 ```shell
-java -jar target/elixa-0.9.2.jar tag-gp -f ireom -m path/to/model/en-twt.model -cn 3 -p path/to/model/en-twt.cfg -l en < input.tab  > output_tagged.txt
+java -jar target/elixa-1.0.jar tag-doc -f ireom -m path/to/model/en-twt.model -cn 3 -p path/to/model/en-twt.cfg -l en < input.tab  > output_tagged.txt
  ```
 
 	where:
@@ -232,21 +232,21 @@ java -jar target/elixa-0.9.2.jar tag-gp -f ireom -m path/to/model/en-twt.model -
       "-p configurationFile"  path to the configuration file. Provided model contain its corresponding configuration files (.cfg extension). IMPORTANT: properties containing paths in the config file must be correctly set according to your system locations
       "-l en" language of the corpus (iso-639 code), English in this example. Elixa allows the following languages to be used: es|eu|en|fr
 
-For more information on the parameters of the tag-gp command you can type:
+For more information on the parameters of the tag-doc command you can type:
 
 ```shell
-java -jar target/elixa-0.9.2.jar tag-gp -h
+java -jar target/elixa-1.0.jar tag-doc -h
 ```
 
-### train-gp
+### train-doc
 
-Train-gp is used to train polarity classification models using a previously tagged data-set. This process can be time consuming depending on the size of the corpus and the features we choose to use.
+Train-doc is used to train polarity classification models using a previously tagged data-set. This process can be time consuming depending on the size of the corpus and the features we choose to use.
 
 ```shell
-java -jar target/elixa-0.9.2.jar train-gp -f tabNotagged -cn 3 -l es -p models/es-twt.cfg < ~/corpora/opinion-Datasets/Behagune/es-behagtwtpressUniq.tsv > rslt/es-modTreatment/es-twtBehag201602twtpressUniq-Bsline-Old-NonegFix.rslt
+java -jar target/elixa-1.0.jar train-doc -f tabNotagged -cn 3 -l es -p models/es-twt.cfg < ~/corpora/opinion-Datasets/Behagune/es-behagtwtpressUniq.tsv > rslt/es-modTreatment/es-twtBehag201602twtpressUniq-Bsline-Old-NonegFix.rslt
 ```
 
-	where (Parameters are very similar to the tag-gp commands): 
+	where (Parameters are very similar to the tag-doc commands): 
 
        "-f tabNotagged" is the format of the corpus:
        		-"tabNotagged" format means: "id<tab>polarity<tab>text" where text is raw text. if used this format, Elixa takes care of linguistically tagging the texts through ixa-pipes.
@@ -264,24 +264,24 @@ java -jar target/elixa-0.9.2.jar train-gp -f tabNotagged -cn 3 -l es -p models/e
 			- "pol|polarity" = pos,neg,neu 
 			- score is the same as polarity but in a numeric scale (e.g. [1..5])
 
-   The rest of the parameters have the same meaning as in the `tag-gp` command. By the default, `train-gp` command performs 10-fold cross validation and 90 train /10 test division evaluation of the trained model. this can be changed by passing `--foldNum` and `--validation` parameters. For further information on those parameters you can type:
+   The rest of the parameters have the same meaning as in the `tag-doc` command. By the default, `train-doc` command performs 10-fold cross validation and 90 train /10 test division evaluation of the trained model. this can be changed by passing `--foldNum` and `--validation` parameters. For further information on those parameters you can type:
 
 
 ```shell
-java -jar target/elixa-0.9.2.jar train-gp -h
+java -jar target/elixa-1.0.jar train-doc -h
 ```
 
 
-### eval-gp
+### eval-doc
 
-eval-gp command is intended to evaluate a previously trained model on a new tagged dataset. The input is a corpus with polarity annotations at document level. eval-gp evaluates the given model against the dataset and outputs evaluation result statistics. Predictions for each document can also be included in the output.
+eval-doc command is intended to evaluate a previously trained model on a new tagged dataset. The input is a corpus with polarity annotations at document level. eval-doc evaluates the given model against the dataset and outputs evaluation result statistics. Predictions for each document can also be included in the output.
 
 ```shell
-java -jar target/elixa-0.9.2.jar eval-gp -f tabNotagged -cn 3 -l es -p models/es-twt.cfg -m path/es-twt.model < /path/to/input/dataset.tsv > /path/to/evaluation.rslt
+java -jar target/elixa-1.0.jar eval-doc -f tabNotagged -cn 3 -l es -p models/es-twt.cfg -m path/es-twt.model < /path/to/input/dataset.tsv > /path/to/evaluation.rslt
 ```
 
 	where:
-       Again, parameters are very similar to those of the train-gp command. Specific parameters of this command include:
+       Again, parameters are very similar to those of the train-doc command. Specific parameters of this command include:
 
 	   -r, --ruleBasedClassifier
             Whether rule based classifier should be used instead of the default ML classifier for computing polarity. A polarity lexicon is mandatory if the rule based classifier is used (polarity lexicon path is specified in the configuration file).
@@ -289,11 +289,11 @@ java -jar target/elixa-0.9.2.jar eval-gp -f tabNotagged -cn 3 -l es -p models/es
 		-o, --outputPredictions
             Output predictions or not; output is the corpus annotated with semeval2015 format.
 
-The rest of the parameters have the same meaning as in the tag-gp command. For further information on those parameters you can type:
+The rest of the parameters have the same meaning as in the tag-doc command. For further information on those parameters you can type:
 
 
 ```shell
-java -jar target/elixa-0.9.2.jar eval-gp -h
+java -jar target/elixa-1.0.jar eval-doc -h
 ```
 
 
@@ -301,7 +301,7 @@ java -jar target/elixa-0.9.2.jar eval-gp -h
 ### tagSentences
 
 ```shell
-java -jar target/elixa-0.9.2.jar tagSentences -d testTag -m absa-models/pos-models/en/en-maxent-100-c5-baseline-dict-penn.bin -l en < input_file.txt
+java -jar target/elixa-1.0.jar tagSentences -d testTag -m absa-models/pos-models/en/en-maxent-100-c5-baseline-dict-penn.bin -l en < input_file.txt
  ```
  
 	where:
@@ -312,13 +312,13 @@ java -jar target/elixa-0.9.2.jar tagSentences -d testTag -m absa-models/pos-mode
 For more information you can type: 
 
 ```shell
- java -jar target/elixa-0.9.2.jar tagSentences -h
+ java -jar target/elixa-1.0.jar tagSentences -h
 ```
 
 ### tag-naf 
 
 ```shell
- java -jar target/elixa-0.9.2.jar tag-naf -l path/to/lexicon.lex < posTagged_input.naf > SentTagged_output.naf
+ java -jar target/elixa-1.0.jar tag-naf -l path/to/lexicon.lex < posTagged_input.naf > SentTagged_output.naf
 ```
 
 	where: 
