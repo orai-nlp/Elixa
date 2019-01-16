@@ -515,7 +515,7 @@ public class CLI {
 		.required(false)
 		.choices("semeval2015", "semeval2014", "tab", "tabglobal", "tabNotagged", "globalNotagged")
 		.setDefault("tabNotagged")
-		.help("Choose format of reference corpus; it defaults to semeval2015 format.\n"
+		.help("Choose format of reference corpus; it defaults to tabNotagged format.\n"
 				+ "	- tabNotagged = \"id<tab>polarity<tab>text[<tab>addittionalfields]\" (polarity may be '?' or 'null' if unknown). "
 				+ "Text is raw text. If this format is used, Elixa takes care of linguistically tagging the texts through ixa-pipes.\n"
 				+ "	- semeval2014 = Semeval 2014 ABSA shared task xml format.\n"
@@ -533,7 +533,7 @@ public class CLI {
 				"		- id is any character string ([^\"]+)\n" + 
 				"		- \"pol|polarity\" = pos,neg,neu \n" + 
 				"		- score is the same as polarity but in a numeric scale (e.g. [1..5])\n"
-				+ "	- tab = \"id<tab>polarity<tab>text[<tab>addittionalfields]\" (polarity may be '?' or 'null' if unknown)\n"
+				+ "	- tab = ...\n"
 				);
 
 		trainDocParser.addArgument("-cn","--classnum")
@@ -727,8 +727,28 @@ public class CLI {
 		evalDocParser.addArgument("-f","--corpusFormat")
 		.required(false)
 		.choices("semeval2015", "semeval2014", "tab", "tabglobal", "tabNotagged","globalNotagged")
-		.setDefault("semeval2015")
-		.help("Choose format of the test corpus; it defaults to semeval2015 format.\n");
+		.setDefault("tabNotagged")
+		.help("Choose format of reference corpus; it defaults to tabNotagged format.\n"
+				+ "	- tabNotagged = \"id<tab>polarity<tab>text[<tab>addittionalfields]\" (polarity may be '?' or 'null' if unknown). "
+				+ "Text is raw text. If this format is used, Elixa takes care of linguistically tagging the texts through ixa-pipes.\n"
+				+ "	- semeval2014 = Semeval 2014 ABSA shared task xml format.\n"
+				+ "	- semeval2015 = Semeval 2015 ABSA shared task xml format.\n"
+				+ "	- globalNotagged|ireom = \"id<tab>text\" per line, Same as tabNotagged, but without polarity annotations.\n"				
+				+ "	- tabGlobal = Already linguistically tagged corpus in conll format (if you have a corpus tagged with a tagger other than ixa-pipes for example)."
+				+ "A pseudo xml format is used to pass document boundaries and polarity annotations. The format of the corpus must be as follows:\n\n" + 
+				"	<doc id=\"([^\"]+)\" (pol|polarity)=\"([^\"]+)\"( score=\"([^\"]+)\")?>\n" + 
+				"	form<tab>lemma<tab>PoS\n" + 
+				"	form<tab>lemma<tab>PoS\n" + 
+				"	...	   \n" + 
+				"	</doc>\n" + 
+				"	...\n\n" + 
+				"	where\n" + 
+				"		- id is any character string ([^\"]+)\n" + 
+				"		- \"pol|polarity\" = pos,neg,neu \n" + 
+				"		- score is the same as polarity but in a numeric scale (e.g. [1..5])\n"
+				+ "	- tab = ...\n"
+				);
+
 		evalDocParser.addArgument("-cn","--classnum")
 		.required(false)
 		.choices("3", "3+", "5+", "5", "binary")
@@ -909,9 +929,27 @@ public class CLI {
 		tagDocParser.addArgument("-f","--corpusFormat")
 		.required(false)
 		.choices("semeval2015", "semeval2014", "tab", "tabglobal", "tabNotagged", "ireom", "globalNotagged")
-		.setDefault("semeval2015")
-		.help("Choose format of reference corpus; it defaults to semeval2015 format.\n"
-				+ "");
+		.setDefault("globalNotagged")
+		.help("Choose format of reference corpus; it defaults to globalNotagged format.\n"
+				+ "	- tabNotagged = \"id<tab>polarity<tab>text[<tab>addittionalfields]\" (polarity may be '?' or 'null' if unknown). "
+				+ "Text is raw text. If this format is used, Elixa takes care of linguistically tagging the texts through ixa-pipes.\n"
+				+ "	- semeval2014 = Semeval 2014 ABSA shared task xml format.\n"
+				+ "	- semeval2015 = Semeval 2015 ABSA shared task xml format.\n"
+				+ "	- globalNotagged|ireom = \"id<tab>text\" per line, Same as tabNotagged, but without polarity annotations.\n"				
+				+ "	- tabGlobal = Already linguistically tagged corpus in conll format (if you have a corpus tagged with a tagger other than ixa-pipes for example)."
+				+ "A pseudo xml format is used to pass document boundaries and polarity annotations. The format of the corpus must be as follows:\n\n" + 
+				"	<doc id=\"([^\"]+)\" (pol|polarity)=\"([^\"]+)\"( score=\"([^\"]+)\")?>\n" + 
+				"	form<tab>lemma<tab>PoS\n" + 
+				"	form<tab>lemma<tab>PoS\n" + 
+				"	...	   \n" + 
+				"	</doc>\n" + 
+				"	...\n\n" + 
+				"	where\n" + 
+				"		- id is any character string ([^\"]+)\n" + 
+				"		- \"pol|polarity\" = pos,neg,neu \n" + 
+				"		- score is the same as polarity but in a numeric scale (e.g. [1..5])\n"
+				+ "	- tab = ...\n"
+				);
 		tagDocParser.addArgument("-m","--model")		
 		.setDefault("default")
 		.help("Pre trained model to classify corpus opinions with. Features are extracted from the model\n");
