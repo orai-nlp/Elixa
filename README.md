@@ -92,10 +92,43 @@ You should see reference to the MAVEN version you have just installed plus the J
 git clone https://github.com/Elhuyar/Elixa
 ```
 
-## 4. Dependencies - IXA-PIPES
+## 4. Resources
+
+
+EliXa may use several language specific resources, such as polarity lexicons and other resources for text normalization. We currently provide such resources for 4 languages; Basque (eu), Spanish (es), English (en) and French (fr). 
+You can get the resources from http://komunitatea.elhuyar.eus/ig/files/2017/04/elixa-resources-0.9.tgz and unpack them in the src/main/resources directory
+
+```shell
+cd elixa
+wget http://komunitatea.elhuyar.eus/ig/files/2017/04/elixa-resources-0.9.tgz
+cd src/main/resources
+tar -xzvf elixa-resources-0.9.tgz
+```
+
+We also provide basic polarity classification models for the previous languages. Models have been trained over Twitter data in the context of the [Behagunea](behagunea.dss2016.eu) project. Data is specific on the topic "San Sebastian 2016 Cultural Capital of Europe". 
+
+You can get the models from https://hizkuntzateknologiak.elhuyar.eus/assets/files/elixa-models-10.tgz
+
+```shell
+cd elixa
+wget https://hizkuntzateknologiak.elhuyar.eus/assets/files/elixa-models-10.tgz
+cd src/main/resources
+tar -xzvf elixa-models-10.tgz
+```
+
+
+Old versions' models:
+   - 0.9.x: https://hizkuntzateknologiak.elhuyar.eus/assets/files/elixa-models-09.tgz
+   - 0.8: http://komunitatea.elhuyar.eus/ig/files/2016/02/elixa-behagunea-models_0.8.tar.gz
+
+
+## 5. Dependencies - IXA-PIPES
 
 
 EliXa uses internally ixa-pipes as default NLP chain (Other NLP processors are supported so long as the input is in one of the accepted formats [tab|naf-xml]). Ixa-pipes require certain resources to be included in the `src/main/resources` directory before compilation.
+
+__For the sake of symplicity, as of version 1.0, ixa-pipes dependencies are included in the resources tarball.__ 
+This section is maintained here for documentation purposes, but you can skip it.
 
 Get the resources from https://github.com/ixa-ehu/ixa-pipe-pos#resources and unpack them in the `src/main/resources` directory
 
@@ -126,33 +159,6 @@ tar -xzvf morph-models-1.5.0.tar.gz -C src/main/resources
 
 
 
-## 5. Resources
-
-
-EliXa may use several language specific resources, such as polarity lexicons and other resources for text normalization. We currently provide such resources for 4 languages; Basque (eu), Spanish (es), English (en) and French (fr). 
-You can get the resources from http://komunitatea.elhuyar.eus/ig/files/2017/04/elixa-resources-0.9.tgz and unpack them in the src/main/resources directory
-
-```shell
-cd elixa
-wget http://komunitatea.elhuyar.eus/ig/files/2017/04/elixa-resources-0.9.tgz
-cd src/main/resources
-tar -xzvf elixa-resources-0.9.tgz
-```
-
-We also provide basic polarity classification models for the previous languages. Models have been trained over Twitter data in the context of the [Behagunea](behagunea.dss2016.eu) project. Data is specific on the topic "San Sebastian 2016 Cultural Capital of Europe". 
-
-You can get the models from http://komunitatea.elhuyar.eus/ig/files/2017/04/elixa-models-0.9.tgz
-
-```shell
-cd elixa
-wget http://komunitatea.elhuyar.eus/ig/files/2017/04/elixa-models-0.9.tgz
-cd src/main/resources
-tar -xzvf elixa-models-0.9.tgz
-```
-
-
-Old versions' models:
-   - 0.8: http://komunitatea.elhuyar.eus/ig/files/2016/02/elixa-behagunea-models_0.8.tar.gz
 
 
 ## 6. Install using maven
@@ -379,8 +385,8 @@ Contact information
 ```shell
 Iñaki San Vicente and Xabier Saralegi
 Elhuyar Foundation
-{i.sanvicente,x.saralegi}@elhuyar.com
+{i.sanvicente,x.saralegi}@elhuyar.eus
 Rodrigo Agerri
 IXA NLP Group
-rodrigo.agerri@ehu.es
+rodrigo.agerri@ehu.eus
 ```

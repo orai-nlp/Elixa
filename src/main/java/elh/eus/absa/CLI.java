@@ -135,8 +135,8 @@ public class CLI {
 	static {
 		defaultLexicons.setProperty("en", "en-union_restrictNew.lex");
 		defaultLexicons.setProperty("eu", "ElhPolar_euLLR.lex");
-		defaultLexicons.setProperty("es", "ElhPolarMoodmap.lex");
-		defaultLexicons.setProperty("fr", "FEEL-fr.lex");
+		defaultLexicons.setProperty("es", "ElhPolar_es.lex");
+		defaultLexicons.setProperty("fr", "FEEL-fr-emot.lex");
 	}
 	
 
