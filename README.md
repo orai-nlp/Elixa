@@ -96,14 +96,18 @@ git clone https://github.com/Elhuyar/Elixa
 
 
 EliXa may use several language specific resources, such as polarity lexicons and other resources for text normalization. We currently provide such resources for 4 languages; Basque (eu), Spanish (es), English (en) and French (fr). 
-You can get the resources from http://komunitatea.elhuyar.eus/ig/files/2017/04/elixa-resources-0.9.tgz and unpack them in the src/main/resources directory
+You can get the resources from https://hizkuntzateknologiak.elhuyar.eus/assets/files/elixa-resources-10.tgz and unpack them in the src/main/resources directory
 
 ```shell
 cd elixa
-wget http://komunitatea.elhuyar.eus/ig/files/2017/04/elixa-resources-0.9.tgz
+wget https://hizkuntzateknologiak.elhuyar.eus/assets/files/elixa-resources-10.tgz
 cd src/main/resources
-tar -xzvf elixa-resources-0.9.tgz
+tar -xzvf elixa-resources-10.tgz
 ```
+
+Old versions' models:
+   - 0.9.x: https://hizkuntzateknologiak.elhuyar.eus/assets/files/elixa-resources-09.tgz
+
 
 We also provide basic polarity classification models for the previous languages. Models have been trained over Twitter data in the context of the [Behagunea](behagunea.dss2016.eu) project. Data is specific on the topic "San Sebastian 2016 Cultural Capital of Europe". 
 
