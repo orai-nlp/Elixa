@@ -16,7 +16,7 @@ The contents of the module are the following:
 
 # INSTALLATION
 
-IMPORTANT NOTE: if you only want to try EliXa or use it as it is, just download the [latest release](https://github.com/Elhuyar/Elixa/releases/download/v1.0/elixa-1.0-full.jar) and go directly to ["Using EliXa"](https://github.com/Elhuyar/Elixa#using-elixa) section of this README. Java JRE>=1.7 is required to run EliXa, although JRE 1.8 is recommended. 
+IMPORTANT NOTE: if you only want to try EliXa or use it as it is, just download the [latest release](https://github.com/Elhuyar/Elixa/releases/download/v1.0/elixa-1.0-full.jar) and go directly to ["Using EliXa"](https://github.com/Elhuyar/Elixa#using-elixa) section of this README. Java JRE>=1.8 is required to run EliXa.
 
 Installing EliXa requires the following steps:
 
@@ -46,14 +46,6 @@ java -version
 ```
 
 You should now see that your JDK is 1.8
-
-IMPORTANT NOTE: EliXa is compatible with JDK 1.7. However, we have found problems when processing NAF files (the xml format used internally by EliXA) containing Emojis, which arise errors such as:
-
- ```org.jdom2.input.JDOMParseException: Error on line x of document file:/example/path/example.kaf: An invalid XML character (Unicode: 0xd83d) was found in the comment```
-
-We tracked the possible source of the problem to this bug report: https://bugs.openjdk.java.net/browse/JDK-8072081, also referenced here: https://github.com/ixa-ehu/ixa-pipe-nerc/issues/10 . In our case this happens with ixa-pipe-pos library. 
-From our tests, it seems using an up to date JDK 1.8 is safe, so we recommend to use it over JDK1.7, specially if you are going to process tweets or social media messages.
-
 
 ## 2. Install MAVEN 3
 
