@@ -61,7 +61,6 @@ import org.jdom2.xpath.XPathExpression;
 import org.jdom2.xpath.XPathFactory;
 
 
-
 /**
  * @author isanvi
  *
@@ -865,6 +864,9 @@ public class CorpusReader {
 			
 			//second field is the polarity of the sentence
 			polarity = fields[1];
+			polarity = polarity.replaceAll("^\"", "");
+			polarity = polarity.replaceAll("\"$", "");
+			polarity = polarity.toLowerCase();
 			
 			//third field is the text of the sentence to tag
 			/*store the sentence and the corresponding review
