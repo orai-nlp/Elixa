@@ -979,8 +979,8 @@ public class Features {
         // setting class attribute (last attribute in train data.
         //traindata.setClassIndex(traindata.numAttributes() - 1);
 		
-		System.err.println("Features: loadInstances() - featNum: "+this.featNum+" - trainset attrib num -> "+rsltdata.numAttributes()+" - ");
-		System.out.println("Features: loadInstances() - featNum: "+this.featNum+" - trainset attrib num -> "+rsltdata.numAttributes()+" - ");
+		System.err.println("Features::loadInstances() - featNum: "+this.featNum+" - trainset attrib num -> "+rsltdata.numAttributes()+" - ");
+		System.out.println("Features::loadInstances() - featNum: "+this.featNum+" - trainset attrib num -> "+rsltdata.numAttributes()+" - ");
 		
 		// int for debuggin the number in problematic tagged files. If not 0 this means probably
 		// a problem in the corpus or the tagger (e.g., character encodings problems) 
@@ -1440,8 +1440,8 @@ public class Features {
         // setting class attribute (last attribute in train data.
         //traindata.setClassIndex(traindata.numAttributes() - 1);
 		
-		System.err.println("Features: loadInstancesConll() - featNum: "+this.featNum+" - trainset attrib num -> "+rsltdata.numAttributes()+" - ");
-		//System.out.println("Features: loadInstancesConll() - featNum: "+this.featNum+" - trainset attrib num -> "+rsltdata.numAttributes()+" - ");
+		System.err.println("Features::loadInstancesConll() - featNum: "+this.featNum+" - trainset attrib num -> "+rsltdata.numAttributes()+" - ");
+		//System.out.println("Features::loadInstancesConll() - featNum: "+this.featNum+" - trainset attrib num -> "+rsltdata.numAttributes()+" - ");
 				
 		int instId = 1;
 		int previouslyTagged = 0;
@@ -3227,7 +3227,8 @@ public class Features {
 			System.err.println("Features::normalizeAndTag -> Error when writing a tagged sentence");
 			ioe.printStackTrace();
 		} catch (Exception e){
-			System.err.println("Features::normalizeAndTag -> Error when tagging sentence, unknown reason");
+			System.err.println("Features::normalizeAndTag -> Error when tagging sentence, unknown reason \n"
+					+currentSent);
 			e.printStackTrace();
 		}
 		return 0; //failure
